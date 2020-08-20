@@ -13,6 +13,7 @@ from babybert import configs
 from babybert.io import load_utterances_from_file
 from babybert.io import load_vocab
 from babybert.utils import evaluate_pp, split
+from babybert.probing import do_probing
 
 
 @attr.s
@@ -65,8 +66,8 @@ def main(param2val):
     # word-piece tokenizer - defines input vocabulary
     print(f'Loading vocab with google_vocab_rule={params.google_vocab_rule}...')
     vocab = load_vocab(childes_vocab_path, google_vocab_path, params.childes_vocab_size, params.google_vocab_rule)
-    assert vocab['[PAD]'] == 0  # AllenNLP expects this
-    assert vocab['[UNK]'] == 1  # AllenNLP expects this
+    assert vocab['[PAD]'] == 0
+    assert vocab['[UNK]'] == 1
     assert vocab['[CLS]'] == 2
     assert vocab['[SEP]'] == 3
     assert vocab['[MASK]'] == 4
@@ -105,14 +106,12 @@ def main(param2val):
     evaluated_steps = []
     train_start = time.time()
     loss_mlm = None
-    step_global = 0
+    step = 0
     is_evaluated_at_current_step = False
     is_first_time_in_loop = True
 
     # max step
-    max_step = None  # TODO
-    print(f'Will stop training at global step={max_step:,}')
-    print(flush=True)
+    max_step = len(batches)
 
     for batch in batches:
 
@@ -121,35 +120,36 @@ def main(param2val):
 
             # masked language modeling task
             loss_mlm = model.train_on_batch('mlm', batch, optimizer)
-            step_global += 1
+            step += 1
 
         is_first_time_in_loop = False
 
         # eval MLM
-        if step_global % configs.Eval.interval == 0 and step_global not in evaluated_steps:
-            evaluated_steps.append(step_global)
+        if step % configs.Eval.interval == 0 and step not in evaluated_steps:
+            evaluated_steps.append(step)
             is_evaluated_at_current_step = True
             model.eval()
 
             # pp
             train_pp = evaluate_pp(model, generator_mlm)
             devel_pp = evaluate_pp(model, generator_mlm)
-            name2xy['train_pp'].append((step_global, train_pp))
-            name2xy['devel_pp'].append((step_global, devel_pp))
+            name2xy['train_pp'].append((step, train_pp))
+            name2xy['devel_pp'].append((step, devel_pp))
 
-            print(f'train_pp-pp={devel_pp}', flush=True)
+            print(f'train-pp={devel_pp}', flush=True)
             print(f'devel-pp={devel_pp}', flush=True)
 
             # probing - test sentences for specific syntactic tasks
-            skip_probing = step_global == 0 and not configs.Eval.eval_at_step_zero
+            skip_probing = step == 0 and not configs.Eval.eval_at_step_zero
             if not skip_probing:
-                evaluate_on_tasks(probing_path, converter_mlm, bucket_batcher_mlm_large, save_path, model, step_global)
+                for task_name in configs.Eval.probing_names:
+                    do_probing(task_name, save_path, probing_path, model, step)
 
         # console
-        if is_evaluated_at_current_step or step_global % configs.Training.feedback_interval == 0:
+        if is_evaluated_at_current_step or step % configs.Training.feedback_interval == 0:
             min_elapsed = (time.time() - train_start) // 60
             pp = torch.exp(loss_mlm) if loss_mlm is not None else np.nan
-            print(f'step global={step_global:>9,}\n'
+            print(f'step global={step:>9,}/{max_step}\n'
                   f'pp={pp :2.4f} \n'
                   f'total minutes elapsed={min_elapsed:<3}\n', flush=True)
             is_evaluated_at_current_step = False
@@ -158,11 +158,12 @@ def main(param2val):
         # pp
         train_pp = evaluate_pp(model, generator_mlm)
         devel_pp = evaluate_pp(model, generator_mlm)
-        name2xy['train_pp'].append((step_global, train_pp))
-        name2xy['devel_pp'].append((step_global, devel_pp))
+        name2xy['train_pp'].append((step, train_pp))
+        name2xy['devel_pp'].append((step, devel_pp))
 
         # probing tasks
-        evaluate_on_tasks(probing_path, converter_mlm, bucket_batcher_mlm_large, save_path, model, step_global)
+        for task_name in configs.Eval.probing_names:
+            do_probing(task_name, save_path, probing_path, model, step)
 
     performance_curves = []
     for name, xy in name2xy.items():
