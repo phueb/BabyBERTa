@@ -1,0 +1,6 @@
+attrs~=19.1.0
+torch~=1.2.0
+numpy~=1.17.2
+pandas~=0.25.1
+transformers~=3.0.2
+https://github.com/phueb/Ludwig/archive/v2.1.2.tar.gz
