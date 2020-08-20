@@ -25,11 +25,8 @@ class Training:
 
 class Eval:
     interval = 10_000
-    test_sentences = False
-    train_split = False
-    print_perl_script_output = False  # happens at every batch so not very useful
-    probe_at_step_zero = True
-    probe_at_end = False
+    eval_at_step_zero = True
+    eval_at_end = False
 
     probing_names = [
         'dummy',

@@ -1,2 +1,7 @@
 # Project exclude paths
 /venv/
+
+.idea
+.idea/*
+*.xml
+*.iml
