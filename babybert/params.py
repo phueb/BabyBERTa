@@ -15,6 +15,7 @@ param2debug = {
 
 param2default = {
     'batch_size': 16,
+    'lr': 1e-4,
     'hidden_size': 256,
     'num_layers': 8,
     'num_attention_heads': 8,

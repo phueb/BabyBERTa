@@ -6,55 +6,79 @@ import torch
 from transformers import BertForPreTraining, BertTokenizer
 
 from babybert import configs
+from babybert.utils import gen_batches
 from babybert.io import load_utterances_from_file, save_forced_choice_predictions, save_open_ended_predictions
-
-
-def predict_forced_choice(model: BertForPreTraining,
-                          tokenizer: BertTokenizer,
-                          sentences: List[List[str]],
-                          ) -> Tuple[List[List[str]], List[List[str]]]:
-    model.eval()
-
-    sentences_in = []
-    cross_entropies = []
-
-    for s in sentences:
-
-        with torch.no_grad():
-            batch = tokenizer(s, padding=True, return_tensors="pt", is_pretokenized=True)
-            output = model(**batch)
-
-            raise NotImplementedError
-
-            # sentences_in += ?
-            # loss = ?
-
-            # we need 1 loss value per utterance.
-            # to do so, we must exclude loss for padding symbols, using attention_mask provided by AllenNLP logic
-            loss_cleaned = [row[np.where(row_mask)[0]].mean().item() for row, row_mask in zip(loss, attention_mask)]
-            cross_entropies += loss_cleaned
-            assert len(sentences_in) == len(cross_entropies)
-
-    return sentences_in, cross_entropies
 
 
 def predict_open_ended(model: BertForPreTraining,
                        tokenizer: BertTokenizer,
                        sentences: List[List[str]],
-                       ) -> Tuple[List[List[str]], List[List[str]]]:
-    model.eval()
+                       ) -> List[List[str]]:
 
-    sentences_in = []
-    sentences_out = []
+    # TODO alternatively use the much easier example code:
+    # from transformers import pipeline
+    #
+    # fill_mask = pipeline(
+    #     "fill-mask",
+    #     model="./EsperBERTo",
+    #     tokenizer="./EsperBERTo"
+    # )
+    # fill_mask('hello [MASK]')
 
-    for s in sentences:
+
+    res = []
+
+    for sentences_in_batch in gen_batches(sentences, 512):
+
         with torch.no_grad():
-            batch = tokenizer(s, padding=True, return_tensors="pt", is_pretokenized=True)
-            output = model(**batch)
+            batch = tokenizer(sentences_in_batch,
+                              padding=True,
+                              return_tensors="pt",
+                              is_pretokenized=True,
+                              return_attention_mask=False)
+
+
+            output = model(**batch.to('cuda'))
+            logits_3d = output[0].detach().cpu().numpy()  # logits for every word
+            masked_word_ids = [0 for _ in range(len(logits_3d))]
+            logits_for_masked_words = np.squeeze(logits_3d[
+                                                     range(len(logits_3d)),
+                                                     masked_word_ids])
+
+            # TODO dummy
+            token_ids = [np.argmax(logits).item() for logits in logits_for_masked_words]
+
+            predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
+            assert len(predicted_words) == len(logits_3d)
+
+            res += predicted_words
+
+    return res
+
+
+def predict_forced_choice(model: BertForPreTraining,
+                          tokenizer: BertTokenizer,
+                          sentences: List[List[str]],
+                          ) -> List[float]:
+    cross_entropies = []
+
+    for sentences_in_batch in gen_batches(sentences, 512):
+        with torch.no_grad():
+            batch = tokenizer(sentences_in_batch,
+                              padding=True,
+                              return_tensors="pt",
+                              is_pretokenized=True,
+                              return_attention_mask=True)
+            output = model(labels=labels, **batch)
+            loss = output[0]  # need to provide labels above to get loss as first element in output
+
+            # we need 1 loss value per utterance.
+            # to do so, we must exclude loss for padding symbols, using attention_mask
+            loss_cleaned = [row[np.where(row_mask)[0]].mean().item() for row, row_mask in zip(loss, attention_mask)]
 
             raise NotImplementedError  # TODO
 
-    return sentences_in, sentences_out
+    return cross_entropies
 
 
 def do_probing(task_name: str,
@@ -64,6 +88,9 @@ def do_probing(task_name: str,
                model: BertForPreTraining,
                step: int,
                ) -> None:
+
+    model.eval()
+
     for task_type in ['forced_choice', 'open_ended']:
 
         # load probing sentences
@@ -72,7 +99,7 @@ def do_probing(task_name: str,
             print(f'WARNING: {probing_data_path_mlm} does not exist', flush=True)
             continue
         print(f'Starting probing with task={task_name}', flush=True)
-        probing_utterances = load_utterances_from_file(probing_data_path_mlm)
+        sentences_in = load_utterances_from_file(probing_data_path_mlm)
 
         # prepare out path
         probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
@@ -81,12 +108,15 @@ def do_probing(task_name: str,
 
         # do inference on forced-choice task
         if task_type == 'forced_choice':
-            sentences_in, cross_entropies = predict_forced_choice(model, tokenizer, probing_utterances)
+
+            continue  # TODO remove
+
+            cross_entropies = predict_forced_choice(model, tokenizer, sentences_in)
             save_forced_choice_predictions(sentences_in, cross_entropies, probing_results_path)
 
         # do inference on open_ended task
         elif task_type == 'open_ended':
-            sentences_in, sentences_out = predict_open_ended(model, tokenizer, probing_utterances)
+            sentences_out = predict_open_ended(model, tokenizer, sentences_in)
             save_open_ended_predictions(sentences_in, sentences_out, probing_results_path)
 
         else:

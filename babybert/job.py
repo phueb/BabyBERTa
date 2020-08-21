@@ -5,14 +5,14 @@ import attr
 from pathlib import Path
 import torch
 
-from transformers import WordpieceTokenizer
+from transformers import BertTokenizer
 from transformers import BertForPreTraining, BertConfig
-from transformers import AdamW
+from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
 from babybert.io import load_utterances_from_file
-from babybert.io import load_vocab
-from babybert.utils import evaluate_pp, split
+from babybert.io import make_vocab
+from babybert.utils import evaluate_pp, split, gen_batches
 from babybert.probing import do_probing
 
 
@@ -65,13 +65,10 @@ def main(param2val):
 
     # word-piece tokenizer - defines input vocabulary
     print(f'Loading vocab with google_vocab_rule={params.google_vocab_rule}...')
-    vocab = load_vocab(childes_vocab_path, google_vocab_path, params.childes_vocab_size, params.google_vocab_rule)
-    assert vocab['[PAD]'] == 0
-    assert vocab['[UNK]'] == 1
-    assert vocab['[CLS]'] == 2
-    assert vocab['[SEP]'] == 3
-    assert vocab['[MASK]'] == 4
-    wordpiece_tokenizer = WordpieceTokenizer(vocab, unk_token='[UNK]')  # does not perform lower-casing
+    vocab = make_vocab(childes_vocab_path, google_vocab_path, params.childes_vocab_size, params.google_vocab_rule)
+    custom_vocab_path = configs.Dirs.data / 'vocabulary' / 'tmp-vocab.txt'
+    custom_vocab_path.open('w').write('\n'.join(vocab))
+    tokenizer = BertTokenizer(custom_vocab_path, do_lower_case=False, do_basic_tokenize=False)
     print(f'Number of types in word-piece tokenizer={len(vocab):,}\n', flush=True)
 
     # load utterances for MLM task
@@ -82,19 +79,21 @@ def main(param2val):
 
     # BERT
     print('Preparing BERT...')
-    bert_config = BertConfig(vocab_size=len(wordpiece_tokenizer.vocab),  # was 32K
+    bert_config = BertConfig(vocab_size=len(tokenizer.vocab),  # was 32K
                              hidden_size=params.hidden_size,  # was 768
                              num_hidden_layers=params.num_layers,  # was 12
                              num_attention_heads=params.num_attention_heads,  # was 12
                              intermediate_size=params.intermediate_size,    # was 3072
                              )
     model = BertForPreTraining(config=bert_config)
+    print('Number of parameters: {:,}\n'.format(model.num_parameters()), flush=True)
     model.cuda(0)
-    num_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print('Number of parameters: {:,}\n'.format(num_params), flush=True)
 
-    # optimizers
+    # optimizer + lr schedule
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)
+    max_step = len(utterances) // params.batch_size
+    print(f'max step={max_step:,}')
+    get_linear_schedule_with_warmup(optimizer, num_warmup_steps=10_000, num_training_steps=max_step)  # TODO what now?
 
     # init performance collection
     name2xy = {
@@ -110,16 +109,28 @@ def main(param2val):
     is_evaluated_at_current_step = False
     is_first_time_in_loop = True
 
-    # max step
-    max_step = len(batches)
 
-    for batch in batches:
+    for utterances_in_batch in gen_batches(utterances, params.batch_size):  # TODO use num_epochs AND num_masked to repeat
+
+        print(optimizer.param_groups[0]["lr"])  # TODO test lr schedule
+
+
+        # TODO add masks and get labels
 
         if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
             model.train()
 
-            # masked language modeling task
-            loss_mlm = model.train_on_batch('mlm', batch, optimizer)
+            # forward MLM
+            batch = tokenizer(utterances_in_batch, padding=True, return_tensors="pt", is_pretokenized=True)
+            output = model(labels=labels, **batch)
+            loss = output[0]
+            if torch.isnan(loss):
+                raise ValueError("nan loss encountered")
+
+            # backward + update  # TODO scale gradients to norm=1.0
+            loss.backward()
+            optimizer.step()
+            optimizer.zero_grad()
             step += 1
 
         is_first_time_in_loop = False

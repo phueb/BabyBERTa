@@ -1,7 +1,8 @@
 import random
-
 import torch
 from typing import Iterator, Optional, List
+
+from transformers import BertForPreTraining
 
 from babybert import configs
 
@@ -50,3 +51,9 @@ def split(data: List, seed: int = 2):
     print(f'num test ={len(test):,}')
 
     return train, devel, test
+
+
+def gen_batches(utterances: List[List[str]], bs: int):
+    for start in range(0, len(utterances), bs):
+        end = min(len(utterances), start + bs)
+        yield utterances[start:end]

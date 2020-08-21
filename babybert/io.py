@@ -11,16 +11,15 @@ upper_cased = configs.Data.special_symbols + configs.Data.childes_symbols  # ord
 
 
 def save_open_ended_predictions(sentences_in: List[List[str]],
-                                sentences_out: List[List[str]],
+                                predicted_words: List[List[str]],
                                 out_path: Path,
                                 verbose: bool = False,
                                 ) -> None:
     print(f'Saving open_ended probing results to {out_path}')
     with out_path.open('w') as f:
-        for s1i, s2i in zip(sentences_in, sentences_out):
-            assert len(s1i) == len(s2i)
-            for ai, bi, ci in zip(s1i, s2i):  # careful, zips over shortest list
-                line = f'{ai:>20} {bi:>20}'
+        for s, pw in zip(sentences_in, predicted_words):
+            for w in s:
+                line = f'{w:>20} {w if w != "[MASK]" else pw:>20}'
                 f.write(line + '\n')
                 if verbose:
                     print(line)
@@ -62,7 +61,7 @@ def load_words_from_vocab_file(vocab_file: Path,
     return res
 
 
-def load_vocab(childes_vocab_file: Path,
+def make_vocab(childes_vocab_file: Path,
                google_vocab_file: Path,
                vocab_size: int,  # childes-vocab, not total vocab
                google_vocab_rule: str) -> OrderedDict:
@@ -99,6 +98,10 @@ def load_vocab(childes_vocab_file: Path,
 
     assert len(set(res)) == len(res)
     assert res['[PAD]'] == 0
+    assert res['[UNK]'] == 1
+    assert res['[CLS]'] == 2
+    assert res['[SEP]'] == 3
+    assert res['[MASK]'] == 4
     assert index == len(res), (index, len(res))
 
     return res
