@@ -15,39 +15,25 @@ def predict_open_ended(model: BertForPreTraining,
                        sentences: List[List[str]],
                        ) -> List[List[str]]:
 
-    # TODO alternatively use the much easier example code:
-    # from transformers import pipeline
-    #
-    # fill_mask = pipeline(
-    #     "fill-mask",
-    #     model="./EsperBERTo",
-    #     tokenizer="./EsperBERTo"
-    # )
-    # fill_mask('hello [MASK]')
-
-
     res = []
 
-    for sentences_in_batch in gen_batches(sentences, 512):
+    for sentences_in_batch in gen_batches(sentences, configs.Eval.batch_size):
 
         with torch.no_grad():
             batch = tokenizer(sentences_in_batch,
                               padding=True,
                               return_tensors="pt",
                               is_pretokenized=True,
-                              return_attention_mask=False)
+                              return_attention_mask=True)
 
-
+            # get logits for all words in batch
             output = model(**batch.to('cuda'))
-            logits_3d = output[0].detach().cpu().numpy()  # logits for every word
-            masked_word_ids = [0 for _ in range(len(logits_3d))]
-            logits_for_masked_words = np.squeeze(logits_3d[
-                                                     range(len(logits_3d)),
-                                                     masked_word_ids])
+            logits_3d = output[0].detach().cpu().numpy()
 
-            # TODO dummy
+            # get predicted words for masked locations
+            mask_locations = np.where(batch.data['input_ids'].cpu() == tokenizer.mask_token_id)  # (row ids, col ids)
+            logits_for_masked_words = np.squeeze(logits_3d[mask_locations])
             token_ids = [np.argmax(logits).item() for logits in logits_for_masked_words]
-
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
             assert len(predicted_words) == len(logits_3d)
 
@@ -62,7 +48,7 @@ def predict_forced_choice(model: BertForPreTraining,
                           ) -> List[float]:
     cross_entropies = []
 
-    for sentences_in_batch in gen_batches(sentences, 512):
+    for sentences_in_batch in gen_batches(sentences, configs.Eval.batch_size):
         with torch.no_grad():
             batch = tokenizer(sentences_in_batch,
                               padding=True,

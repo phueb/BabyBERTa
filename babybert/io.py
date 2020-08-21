@@ -13,7 +13,7 @@ upper_cased = configs.Data.special_symbols + configs.Data.childes_symbols  # ord
 def save_open_ended_predictions(sentences_in: List[List[str]],
                                 predicted_words: List[List[str]],
                                 out_path: Path,
-                                verbose: bool = False,
+                                verbose: bool = True,
                                 ) -> None:
     print(f'Saving open_ended probing results to {out_path}')
     with out_path.open('w') as f:
@@ -97,12 +97,15 @@ def make_vocab(childes_vocab_file: Path,
         index += 1
 
     assert len(set(res)) == len(res)
+    assert index == len(res), (index, len(res))
+
+    # the transformers.PreTrainedTokenizer doesn't respect the order below, but it doesn't matter.
+    # it's good to check this order here, so that the special tokens show up in first few lines in vocab file
     assert res['[PAD]'] == 0
     assert res['[UNK]'] == 1
     assert res['[CLS]'] == 2
     assert res['[SEP]'] == 3
     assert res['[MASK]'] == 4
-    assert index == len(res), (index, len(res))
 
     return res
 

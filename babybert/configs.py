@@ -27,11 +27,12 @@ class Eval:
     interval = 10_000
     eval_at_step_zero = True
     eval_at_end = False
+    batch_size = 512
 
     probing_names = [
+        'dummy',
         'agreement_across_1_adjective',
         'agreement_across_2_adjectives',
-        'dummy',
         'agreement_between_neighbors',
         'agreement_across_PP',
         'agreement_across_RC',

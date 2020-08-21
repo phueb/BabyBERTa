@@ -1,6 +1,6 @@
 
 param2requests = {
-    'google_vocab_rule': ['inclusive']
+    'training_order': ['age-ordered', 'age-reversed']  # TODO
 }
 
 # With num_masked=1, made 0,575,465 instances -> 035,966 train MLM batches (when batch-size=16)
@@ -16,6 +16,7 @@ param2debug = {
 param2default = {
     'batch_size': 16,
     'lr': 1e-4,
+    'training_order': 'age-ordered',
     'hidden_size': 256,
     'num_layers': 8,
     'num_attention_heads': 8,

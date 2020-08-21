@@ -66,7 +66,7 @@ def main(param2val):
     # word-piece tokenizer - defines input vocabulary
     print(f'Loading vocab with google_vocab_rule={params.google_vocab_rule}...')
     vocab = make_vocab(childes_vocab_path, google_vocab_path, params.childes_vocab_size, params.google_vocab_rule)
-    custom_vocab_path = configs.Dirs.data / 'vocabulary' / 'tmp-vocab.txt'
+    custom_vocab_path = configs.Dirs.data / 'vocabulary' / 'effective_vocab.txt'
     custom_vocab_path.open('w').write('\n'.join(vocab))
     tokenizer = BertTokenizer(custom_vocab_path, do_lower_case=False, do_basic_tokenize=False)
     print(f'Number of types in word-piece tokenizer={len(vocab):,}\n', flush=True)
@@ -75,7 +75,7 @@ def main(param2val):
     utterances = load_utterances_from_file(data_path_mlm, allow_discard=True)
     train_utterances, devel_utterances, test_utterances = split(utterances)
 
-    # TODO batching
+    # TODO batching for non-trainin utterances
 
     # BERT
     print('Preparing BERT...')
