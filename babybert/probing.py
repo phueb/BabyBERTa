@@ -6,6 +6,7 @@ import torch
 from transformers import BertForPreTraining, BertTokenizer
 
 from babybert import configs
+from babybert.io import save_yaml_file
 from babybert.utils import gen_batches
 from babybert.io import load_utterances_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
@@ -80,17 +81,17 @@ def do_probing(task_name: str,
     for task_type in ['forced_choice', 'open_ended']:
 
         # load probing sentences
-        probing_data_path_mlm = probing_path / task_type / f'{task_name}.txt'
-        if not probing_data_path_mlm.exists():
-            print(f'WARNING: {probing_data_path_mlm} does not exist', flush=True)
+        sentences_in_path = probing_path / task_type / f'{task_name}.txt'
+        if not sentences_in_path.exists():
+            print(f'WARNING: {sentences_in_path} does not exist', flush=True)
             continue
         print(f'Starting probing with task={task_name}', flush=True)
-        sentences_in = load_utterances_from_file(probing_data_path_mlm)
+        sentences_in = load_utterances_from_file(sentences_in_path)
 
         # prepare out path
         probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
         if not probing_results_path.parent.exists():
-            probing_results_path.parent.mkdir(exist_ok=True)
+            probing_results_path.parent.mkdir(exist_ok=True, parents=True)
 
         # do inference on forced-choice task
         if task_type == 'forced_choice':
@@ -104,6 +105,8 @@ def do_probing(task_name: str,
         elif task_type == 'open_ended':
             sentences_out = predict_open_ended(model, tokenizer, sentences_in)
             save_open_ended_predictions(sentences_in, sentences_out, probing_results_path)
+            save_yaml_file(param2val_path=probing_results_path.parent.parent.parent.parent / 'param2val.yaml',
+                           architecture=probing_results_path.parent.parent.parent.parent.name)
 
         else:
             raise AttributeError('Invalid arg to "task_type".')

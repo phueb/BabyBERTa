@@ -41,9 +41,3 @@ class Eval:
         'agreement_in_1_verb_question',
         'agreement_in_2_verb_question',
     ]
-
-
-class Wordpieces:
-    verbose = False
-    warn_on_mismatch = False
-

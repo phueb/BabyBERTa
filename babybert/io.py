@@ -1,3 +1,4 @@
+import yaml
 import numpy as np
 from typing import List
 from pathlib import Path
@@ -13,7 +14,7 @@ upper_cased = configs.Data.special_symbols + configs.Data.childes_symbols  # ord
 def save_open_ended_predictions(sentences_in: List[List[str]],
                                 predicted_words: List[List[str]],
                                 out_path: Path,
-                                verbose: bool = True,
+                                verbose: bool = False,
                                 ) -> None:
     print(f'Saving open_ended probing results to {out_path}')
     with out_path.open('w') as f:
@@ -170,3 +171,11 @@ def load_utterances_from_file(file_path: Path,
         print(f'Median utterance length: {np.median(lengths):.2f}')
 
     return res
+
+
+def save_yaml_file(param2val_path: Path,
+                   architecture: str,
+                   ):
+    param2val = {'architecture': architecture}
+    with param2val_path.open('w', encoding='utf8') as f:
+        yaml.dump(param2val, f, default_flow_style=False, allow_unicode=True)
