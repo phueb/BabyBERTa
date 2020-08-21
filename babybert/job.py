@@ -56,7 +56,7 @@ def main(param2val):
     probing_path = project_path / 'data' / 'probing'
 
     if not probing_path.is_dir():  # when not using Ludwig
-        probing_path = configs.Dirs.local_probing_path
+        probing_path = configs.Dirs.local_probing_sentences_path
 
     # prepare save_path - this must be done when job is executed locally (not on Ludwig worker)
     save_path = Path(param2val['save_path'])

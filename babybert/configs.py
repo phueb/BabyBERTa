@@ -4,14 +4,16 @@ from pathlib import Path
 class Dirs:
     root = Path(__file__).parent.parent
     data = root / 'data'
-    local_probing_path = Path.home() / 'Babeval_phueb' /'sentences'
+    babeval_root = Path.home() / 'Babeval_phueb'
+    local_probing_sentences_path = babeval_root / 'sentences'
+    local_probing_results_path = babeval_root / 'runs'
     # probing data can be found at https://github.com/phueb/Babeval/tree/master/sentences
 
 
 class Data:
     uncased = True  # make sure the correct Google vocab is loaded, e.g. bert-base-uncased-vocab.txt
     min_seq_length = 2
-    max_seq_length = 32  # before word-piecing
+    max_seq_length = 128  # before word-piecing
     train_prob = 0.8  # probability that utterance is assigned to train split
     special_symbols = ['[PAD]', '[UNK]', '[CLS]', '[SEP]', '[MASK]']  # order matters
     childes_symbols = ['[NAME]', '[PLACE]', '[MISC]']

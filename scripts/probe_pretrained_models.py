@@ -16,7 +16,7 @@ if __name__ == '__main__':
 
     # for each model
     for path_to_bin in (configs.Dirs.root / 'pretrained_models').glob('*/*.bin'):
-        architecture_name = path_to_bin.parent
+        architecture_name = path_to_bin.parent.name
         bert_config_path = configs.Dirs.root / 'pretrained_models' / architecture_name / 'bert_config.json'
         bin_file = configs.Dirs.root / 'pretrained_models' / path_to_bin
 
@@ -29,12 +29,13 @@ if __name__ == '__main__':
         model.cuda(0)
         print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
 
-        step = path_to_bin.name.split('_')[-2]  # TODO test
-        save_path = configs.Dirs.root / 'pretrained_models' / architecture_name / 'saves'
+        step = path_to_bin.name.split('_')[-2]
+        rep_name = path_to_bin.name.split('_')[-3]
+        save_path = configs.Dirs.local_probing_results_path / architecture_name / rep_name / 'saves'
 
         # for each probing task
         for task_name in configs.Eval.probing_names:
-            do_probing(task_name, save_path, configs.Dirs.local_probing_path, tokenizer, model, step)
+            do_probing(task_name, save_path, configs.Dirs.local_probing_sentences_path, tokenizer, model, step)
 
 
 
