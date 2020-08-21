@@ -1,31 +1,18 @@
 from typing import Dict
 from collections import OrderedDict
-from transformers import WordpieceTokenizer, BertConfig, BertForPreTraining
+from transformers import BertTokenizer, BertConfig, BertForPreTraining
 import torch
 
 from babybert import configs
 from babybert.probing import do_probing
 
 
-def make_w2id_from_vocab_file() -> Dict[str, int]:
-    res = OrderedDict()
-    index = 0
-    vocab_path = configs.Dirs.root / 'pretrained_models' / 'vocab_new.txt'
-    for token in vocab_path.open().read().split('\n'):
-        res[token] = index
-        index += 1
-
-    print(f'Loaded vocab with {len(res):,} words')
-
-    return res
-
-
 if __name__ == '__main__':
 
     # TODO [PAD] is not necessarily at index 0, and [MASK] is not necessarily at index 4
     # make wordpiece tokenizer for tokenizing test sentences
-    w2id = make_w2id_from_vocab_file()
-    tokenizer = WordpieceTokenizer(w2id, unk_token='[UNK]')
+    vocab_path = configs.Dirs.root / 'pretrained_models' / 'vocab_new.txt'
+    tokenizer = BertTokenizer(vocab_path, do_lower_case=False, do_basic_tokenize=False)
 
     # for each model
     for path_to_bin in (configs.Dirs.root / 'pretrained_models').glob('*/*.bin'):
@@ -47,7 +34,7 @@ if __name__ == '__main__':
 
         # for each probing task
         for task_name in configs.Eval.probing_names:
-            do_probing(task_name, save_path, configs.Dirs.local_probing_path, model, step)
+            do_probing(task_name, save_path, configs.Dirs.local_probing_path, tokenizer, model, step)
 
 
 

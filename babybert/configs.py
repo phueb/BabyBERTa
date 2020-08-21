@@ -29,10 +29,10 @@ class Eval:
     eval_at_end = False
 
     probing_names = [
-        'dummy',
-        'agreement_between_neighbors',
         'agreement_across_1_adjective',
         'agreement_across_2_adjectives',
+        'dummy',
+        'agreement_between_neighbors',
         'agreement_across_PP',
         'agreement_across_RC',
         'agreement_in_1_verb_question',
