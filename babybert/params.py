@@ -1,7 +1,7 @@
 
 param2requests = {
     'training_order': ['age-ordered', 'age-reversed'],  # TODO
-    'include_punctuation': [False],  # TODO test
+    'include_punctuation': [True],  # TODO test
 }
 
 
