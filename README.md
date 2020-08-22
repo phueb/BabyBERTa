@@ -45,9 +45,14 @@ This reduces training time, code complexity and [learning two separate semantic 
 
 ## Using the code
 
+Code in this repository is executed using `Ludwig`,
+ a library for running GPU-bound Python jobs on dedicated machines owned by the UIUC Learning & Language Lab.
+
 ### Pre-training from scratch
 
-Call the function `babybert.job.main()`
+to run 10 replications of each configuration, in the terminal,
+
+`ludwig -r10`
 
 ### Probing pre-trained models
 

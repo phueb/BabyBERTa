@@ -3,4 +3,4 @@ torch~=1.2.0
 numpy~=1.17.2
 pandas~=0.25.1
 transformers~=3.0.2
-https://github.com/phueb/Ludwig/archive/v2.1.2.tar.gz
+https://github.com/phueb/Ludwig/archive/v2.1.3.tar.gz
