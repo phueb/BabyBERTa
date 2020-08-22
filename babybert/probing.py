@@ -3,6 +3,7 @@ from typing import Iterator, Tuple, List
 import numpy as np
 
 import torch
+from torch.nn import CrossEntropyLoss
 from transformers import BertForPreTraining, BertTokenizer
 
 from babybert import configs
@@ -48,6 +49,7 @@ def predict_forced_choice(model: BertForPreTraining,
                           sentences: List[List[str]],
                           ) -> List[float]:
     cross_entropies = []
+    loss_fct = CrossEntropyLoss(reduction='none')
 
     for sentences_in_batch in gen_batches(sentences, configs.Eval.batch_size):
         with torch.no_grad():
@@ -56,14 +58,21 @@ def predict_forced_choice(model: BertForPreTraining,
                               return_tensors="pt",
                               is_pretokenized=True,
                               return_attention_mask=True)
-            output = model(labels=labels, **batch)
-            loss = output[0]  # need to provide labels above to get loss as first element in output
+
+            # logits
+            output = model(**batch.to('cuda'))
+            logits_3d = output[0]
+
+            # compute avg cross entropy per sentence
+            labels = batch.data['input_ids']
+            # logits need to be [batch size, vocab size, seq length]
+            # tags need to be [batch size, vocab size]
+            loss = loss_fct(logits_3d.permute(0, 2, 1), labels)
 
             # we need 1 loss value per utterance.
             # to do so, we must exclude loss for padding symbols, using attention_mask
-            loss_cleaned = [row[np.where(row_mask)[0]].mean().item() for row, row_mask in zip(loss, attention_mask)]
-
-            raise NotImplementedError  # TODO
+            cross_entropies += [row[np.where(row_mask)[0]].mean().item()
+                                for row, row_mask in zip(loss, batch.data['attention_mask'].cpu().numpy())]
 
     return cross_entropies
 
@@ -93,11 +102,13 @@ def do_probing(task_name: str,
         if not probing_results_path.parent.exists():
             probing_results_path.parent.mkdir(exist_ok=True, parents=True)
 
+        # save param2val
+        param_path = save_path.parent.parent
+        if not param_path.exists():
+            save_yaml_file(param2val_path=param_path / 'param2val.yaml', architecture=param_path.name)
+
         # do inference on forced-choice task
         if task_type == 'forced_choice':
-
-            continue  # TODO remove
-
             cross_entropies = predict_forced_choice(model, tokenizer, sentences_in)
             save_forced_choice_predictions(sentences_in, cross_entropies, probing_results_path)
 
@@ -105,8 +116,5 @@ def do_probing(task_name: str,
         elif task_type == 'open_ended':
             sentences_out = predict_open_ended(model, tokenizer, sentences_in)
             save_open_ended_predictions(sentences_in, sentences_out, probing_results_path)
-            save_yaml_file(param2val_path=probing_results_path.parent.parent.parent.parent / 'param2val.yaml',
-                           architecture=probing_results_path.parent.parent.parent.parent.name)
-
         else:
             raise AttributeError('Invalid arg to "task_type".')

@@ -9,18 +9,21 @@ from babybert.probing import do_probing
 
 if __name__ == '__main__':
 
-    # TODO [PAD] is not necessarily at index 0, and [MASK] is not necessarily at index 4
-    # make wordpiece tokenizer for tokenizing test sentences
+    # make tokenizer for tokenizing test sentences
     vocab_path = configs.Dirs.root / 'pretrained_models' / 'vocab_new.txt'
     tokenizer = BertTokenizer(vocab_path, do_lower_case=False, do_basic_tokenize=False)
 
     # for each model
     for path_to_bin in (configs.Dirs.root / 'pretrained_models').glob('*/*.bin'):
+
+        # load weights
         architecture_name = path_to_bin.parent.name
         bert_config_path = configs.Dirs.root / 'pretrained_models' / architecture_name / 'bert_config.json'
         bin_file = configs.Dirs.root / 'pretrained_models' / path_to_bin
 
-        # load bert model
+        # make bert model
+        print()
+        print('============================================')
         config = BertConfig.from_json_file(bert_config_path)
         print(f'Building PyTorch model from configuration in {bert_config_path}')
         model = BertForPreTraining(config)
