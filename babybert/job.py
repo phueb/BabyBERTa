@@ -168,7 +168,7 @@ def main(param2val):
                 name2xy['train_pps'].append((step, train_pp))
                 name2xy['devel_pps'].append((step, devel_pp))
 
-                print(f'train-pp={devel_pp}', flush=True)
+                print(f'train-pp={train_pp}', flush=True)
                 print(f'devel-pp={devel_pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks

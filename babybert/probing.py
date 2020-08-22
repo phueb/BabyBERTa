@@ -114,6 +114,7 @@ def do_probing(task_name: str,
         # do inference on open_ended task
         elif task_type == 'open_ended':
             sentences_out = predict_open_ended(model, tokenizer, sentences_in)
-            save_open_ended_predictions(sentences_in, sentences_out, probing_results_path)
+            save_open_ended_predictions(sentences_in, sentences_out, probing_results_path,
+                                        verbose=True if 'dummy' in task_name else False)
         else:
             raise AttributeError('Invalid arg to "task_type".')

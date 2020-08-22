@@ -19,9 +19,7 @@ class Data:
 
 
 class Training:
-    feedback_interval = 100
-    ignored_index = -1  # any ids in argument "tags" to cross-entropy fn are ignored
-    debug = False
+    feedback_interval = 1000
 
 
 class Eval:
