@@ -34,11 +34,11 @@ if __name__ == '__main__':
 
         step = path_to_bin.name.split('_')[-2]
         rep_name = path_to_bin.name.split('_')[-3]
-        save_path = configs.Dirs.local_probing_results_path / architecture_name / rep_name / 'saves'
+        save_path = configs.Dirs.local_probing_results / architecture_name / rep_name / 'saves'
 
         # for each probing task
         for task_name in configs.Eval.probing_names:
-            do_probing(task_name, save_path, configs.Dirs.local_probing_sentences_path, tokenizer, model, step)
+            do_probing(task_name, save_path, configs.Dirs.probing_sentences, tokenizer, model, step)
 
 
 

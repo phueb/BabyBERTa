@@ -53,17 +53,19 @@ def main(param2val):
     params = Params.from_param2val(param2val)
     print(params, flush=True)
 
-    #  paths to data 
+    #  paths to data
     project_path = Path(param2val['project_path'])
     data_path_mlm = project_path / 'data' / 'corpora' / f'{params.corpus_name}.txt'
     childes_vocab_path = project_path / 'data' / 'vocabulary' / f'{params.corpus_name}_vocab.txt'
     google_vocab_path = project_path / 'data' / 'vocabulary' / 'bert-base-uncased-vocab.txt'  # to get word pieces
-    probing_path = project_path / 'data' / 'probing'
 
-    if not probing_path.is_dir():  # when not using Ludwig
-        probing_path = configs.Dirs.local_probing_sentences_path
+    # probing path - contains probing sentences
+    probing_path = configs.Dirs.probing_sentences
+    if not probing_path.exists():
+        raise FileNotFoundError(f'Path to probing sentences does not exist: {probing_path}.'
+                                'Probing sentences can be downloaded from github.com/phueb/Babeval/sentences')
 
-    # prepare save_path - this must be done when job is executed locally (not on Ludwig worker)
+    # save_path - locations where probing results are saved
     save_path = Path(param2val['save_path'])
     if not save_path.exists():
         save_path.mkdir(parents=True)
