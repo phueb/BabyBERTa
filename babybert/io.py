@@ -7,10 +7,6 @@ from collections import OrderedDict
 from babybert import configs
 
 
-# when lower-casing, do not lower-case upper-cased symbols
-upper_cased = configs.Data.special_symbols + configs.Data.childes_symbols  # order matters
-
-
 def save_open_ended_predictions(sentences_in: List[List[str]],
                                 predicted_words: List[List[str]],
                                 out_path: Path,
@@ -79,7 +75,7 @@ def make_vocab(childes_vocab_file: Path,
 
     # add from childes vocab
     if google_vocab_rule == 'inclusive':
-        to_index += set(childes_vocab + google_vocab_cleaned)
+        to_index += sorted(set(childes_vocab + google_vocab_cleaned))
     elif google_vocab_rule == 'exclusive':
         to_index += google_vocab_cleaned
     elif google_vocab_rule == 'excluded':
@@ -112,13 +108,17 @@ def make_vocab(childes_vocab_file: Path,
 
 
 def load_utterances_from_file(file_path: Path,
-                              verbose: bool = False,
+                              training_order: str,
+                              verbose: bool = True,
                               allow_discard: bool = False) -> List[List[str]]:
     """
     load utterances for language modeling from text file
     """
 
     print(f'Loading {file_path}')
+
+    # when lower-casing, do not lower-case upper-cased symbols
+    upper_cased = set(configs.Data.childes_symbols)
 
     res = []
     punctuation = {'.', '?', '!'}
@@ -167,9 +167,17 @@ def load_utterances_from_file(file_path: Path,
     if verbose:
         lengths = [len(u) for u in res]
         print('Found {:,} utterances'.format(len(res)))
+        print(f'Min    utterance length: {np.min(lengths):.2f}')
         print(f'Max    utterance length: {np.max(lengths):.2f}')
         print(f'Mean   utterance length: {np.mean(lengths):.2f}')
         print(f'Median utterance length: {np.median(lengths):.2f}')
+
+    if training_order == 'age-ordered':
+        pass
+    elif training_order == 'age-reversed':
+        res = res[::-1]
+    else:
+        raise AttributeError('Invalid arg to "training_order".')
 
     return res
 

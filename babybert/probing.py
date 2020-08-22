@@ -8,7 +8,7 @@ from transformers import BertForPreTraining, BertTokenizer
 
 from babybert import configs
 from babybert.io import save_yaml_file
-from babybert.utils import gen_batches
+from babybert.utils import gen_batches_without_labels
 from babybert.io import load_utterances_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
@@ -19,14 +19,13 @@ def predict_open_ended(model: BertForPreTraining,
 
     res = []
 
-    for sentences_in_batch in gen_batches(sentences, configs.Eval.batch_size):
+    for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
 
         with torch.no_grad():
             batch = tokenizer(sentences_in_batch,
                               padding=True,
                               return_tensors="pt",
-                              is_pretokenized=True,
-                              return_attention_mask=True)
+                              is_pretokenized=True)
 
             # get logits for all words in batch
             output = model(**batch.to('cuda'))
@@ -51,7 +50,7 @@ def predict_forced_choice(model: BertForPreTraining,
     cross_entropies = []
     loss_fct = CrossEntropyLoss(reduction='none')
 
-    for sentences_in_batch in gen_batches(sentences, configs.Eval.batch_size):
+    for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
         with torch.no_grad():
             batch = tokenizer(sentences_in_batch,
                               padding=True,

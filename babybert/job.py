@@ -4,6 +4,7 @@ import pandas as pd
 import attr
 from pathlib import Path
 import torch
+from torch.nn import CrossEntropyLoss
 
 from transformers import BertTokenizer
 from transformers import BertForPreTraining, BertConfig
@@ -11,8 +12,9 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
 from babybert.io import load_utterances_from_file
+from babybert.memory import set_memory_limit
 from babybert.io import make_vocab
-from babybert.utils import evaluate_pp, split, gen_batches
+from babybert.utils import evaluate_pp, split, gen_batches_with_labels, do_masking
 from babybert.probing import do_probing
 
 
@@ -20,6 +22,7 @@ from babybert.probing import do_probing
 class Params(object):
     batch_size = attr.ib(validator=attr.validators.instance_of(int))
     lr = attr.ib(validator=attr.validators.instance_of(float))
+    training_order = attr.ib(validator=attr.validators.instance_of(str))
     num_layers = attr.ib(validator=attr.validators.instance_of(int))
     hidden_size = attr.ib(validator=attr.validators.instance_of(int))
     num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
@@ -43,6 +46,8 @@ class Params(object):
 
 
 def main(param2val):
+
+    set_memory_limit(prop=0.9)
 
     # params
     params = Params.from_param2val(param2val)
@@ -71,11 +76,12 @@ def main(param2val):
     tokenizer = BertTokenizer(custom_vocab_path, do_lower_case=False, do_basic_tokenize=False)
     print(f'Number of types in word-piece tokenizer={len(vocab):,}\n', flush=True)
 
-    # load utterances for MLM task
-    utterances = load_utterances_from_file(data_path_mlm, allow_discard=True)
-    train_utterances, devel_utterances, test_utterances = split(utterances)
-
-    # TODO batching for non-trainin utterances
+    # load utterances for MLM
+    utterances = load_utterances_from_file(data_path_mlm, params.training_order, allow_discard=True)
+    # mask words systematically, and get labels
+    tmp1 = do_masking(utterances, params.num_masked)
+    # split into train, devel, test
+    train_data, devel_data, test_data = split(tmp1)  # each is a tuple e.g. (masked_utterances, masked_word)
 
     # BERT
     print('Preparing BERT...')
@@ -91,9 +97,9 @@ def main(param2val):
 
     # optimizer + lr schedule
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)
-    max_step = len(utterances) // params.batch_size
+    max_step = len(train_data) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
-    get_linear_schedule_with_warmup(optimizer, num_warmup_steps=10_000, num_training_steps=max_step)  # TODO what now?
+    # get_linear_schedule_with_warmup(optimizer, num_warmup_steps=10_000, num_training_steps=max_step)  # TODO
 
     # init performance collection
     name2xy = {
@@ -102,80 +108,87 @@ def main(param2val):
     }
 
     # init
+    loss_fct = CrossEntropyLoss()
     evaluated_steps = []
     train_start = time.time()
-    loss_mlm = None
+    loss = None
     step = 0
     is_evaluated_at_current_step = False
     is_first_time_in_loop = True
 
+    # train + eval loop
+    for epoch_id in range(params.num_epochs):
+        for train_batch in gen_batches_with_labels(train_data, params.batch_size):  # TODO use num_epochs
 
-    for utterances_in_batch in gen_batches(utterances, params.batch_size):  # TODO use num_epochs AND num_masked to repeat
+            # print(optimizer.param_groups[0]["lr"])  # TODO test lr schedule
 
-        print(optimizer.param_groups[0]["lr"])  # TODO test lr schedule
+            if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
+                model.train()
+                masked_utterances, masked_words = zip(*train_batch)
 
+                # forward MLM
+                batch = tokenizer(masked_utterances,
+                                  padding=True,
+                                  return_tensors="pt",
+                                  is_pretokenized=True)
+                output = model(**batch.to('cuda'))
+                logits_3d = output[0]
+                logits_2d = logits_3d.view(-1, model.config.vocab_size)
 
-        # TODO add masks and get labels
+                # loss
+                masked_word_token_ids = torch.tensor(tokenizer.convert_tokens_to_ids(masked_words),
+                                                     device='cuda',
+                                                     dtype=torch.long,
+                                                     requires_grad=False)
+                logits_for_masked_words = logits_2d[batch.data['input_ids'].view(-1) == tokenizer.mask_token_id]
+                loss = loss_fct(logits_for_masked_words,  # [batch size, vocab size]
+                                masked_word_token_ids.view(-1))  # [batch size]
 
-        if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
-            model.train()
+                # backward + update  # TODO scale gradients to norm=1.0
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+                step += 1
 
-            # forward MLM
-            batch = tokenizer(utterances_in_batch, padding=True, return_tensors="pt", is_pretokenized=True)
-            output = model(labels=labels, **batch)
-            loss = output[0]
-            if torch.isnan(loss):
-                raise ValueError("nan loss encountered")
+            is_first_time_in_loop = False
 
-            # backward + update  # TODO scale gradients to norm=1.0
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            step += 1
+            # eval MLM
+            if step % configs.Eval.interval == 0 and step not in evaluated_steps:
+                evaluated_steps.append(step)
+                is_evaluated_at_current_step = True
+                model.eval()
 
-        is_first_time_in_loop = False
+                # pp
+                print('Computing train pp...')
+                train_pp = evaluate_pp(model, tokenizer, train_data[:len(devel_data)])
+                print('Computing devel pp...')
+                devel_pp = evaluate_pp(model, tokenizer, devel_data)
+                name2xy['train_pps'].append((step, train_pp))
+                name2xy['devel_pps'].append((step, devel_pp))
 
-        # eval MLM
-        if step % configs.Eval.interval == 0 and step not in evaluated_steps:
-            evaluated_steps.append(step)
-            is_evaluated_at_current_step = True
-            model.eval()
+                print(f'train-pp={devel_pp}', flush=True)
+                print(f'devel-pp={devel_pp}', flush=True)
 
-            # pp
-            train_pp = evaluate_pp(model, generator_mlm)
-            devel_pp = evaluate_pp(model, generator_mlm)
-            name2xy['train_pp'].append((step, train_pp))
-            name2xy['devel_pp'].append((step, devel_pp))
+                # probing - test sentences for specific syntactic tasks
+                skip_probing = step == 0 and not configs.Eval.eval_at_step_zero
+                if not skip_probing:
+                    for task_name in configs.Eval.probing_names:
+                        do_probing(task_name, save_path, probing_path, tokenizer, model, step)
 
-            print(f'train-pp={devel_pp}', flush=True)
-            print(f'devel-pp={devel_pp}', flush=True)
+                if max_step - step < configs.Eval.interval: # no point in continuing training
+                    print('Detected last eval step. Exiting training loop', flush=True)
+                    break
 
-            # probing - test sentences for specific syntactic tasks
-            skip_probing = step == 0 and not configs.Eval.eval_at_step_zero
-            if not skip_probing:
-                for task_name in configs.Eval.probing_names:
-                    do_probing(task_name, save_path, probing_path, model, step)
+            # console
+            if is_evaluated_at_current_step or step % configs.Training.feedback_interval == 0:
+                min_elapsed = (time.time() - train_start) // 60
+                pp = torch.exp(loss) if loss is not None else np.nan
+                print(f'epoch={epoch_id + 1:>3,}/{params.num_epochs} step={step:>9,}/{max_step:>9,}\n'
+                      f'pp={pp :2.4f} \n'
+                      f'total minutes elapsed={min_elapsed:<3}\n', flush=True)
+                is_evaluated_at_current_step = False
 
-        # console
-        if is_evaluated_at_current_step or step % configs.Training.feedback_interval == 0:
-            min_elapsed = (time.time() - train_start) // 60
-            pp = torch.exp(loss_mlm) if loss_mlm is not None else np.nan
-            print(f'step global={step:>9,}/{max_step}\n'
-                  f'pp={pp :2.4f} \n'
-                  f'total minutes elapsed={min_elapsed:<3}\n', flush=True)
-            is_evaluated_at_current_step = False
-
-    if configs.Eval.eval_at_end:
-        # pp
-        train_pp = evaluate_pp(model, generator_mlm)
-        devel_pp = evaluate_pp(model, generator_mlm)
-        name2xy['train_pp'].append((step, train_pp))
-        name2xy['devel_pp'].append((step, devel_pp))
-
-        # probing tasks
-        for task_name in configs.Eval.probing_names:
-            do_probing(task_name, save_path, probing_path, model, step)
-
+    # prepare collected data for returning to Ludwig
     performance_curves = []
     for name, xy in name2xy.items():
         print(f'Making pandas series with name={name} and length={len(xy)}', flush=True)

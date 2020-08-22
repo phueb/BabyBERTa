@@ -23,11 +23,24 @@ Probing data can be found [here](https://github.com/phueb/Babeval).
 
 ## BabyBERT vs. BERT
  
-Due to the limited size of child-directed speech data, 
-a much smaller BERT than the standard BERT models is trained here, which is called BabyBERT.
-It has fewer hidden units and layers, and preliminary observations show that the reduced size is sufficient for reaching near-optimal pre-training performance on the CHILDES corpus.
+BabyBERT is inspired by the original BERT model, but departs from it in many ways.
+ 
+Because our goal is to work with a compact model, optimized for acquiring distributional knowledge about child-directed speech,
+ rather than some down-stream application, BabyBERT differs from the original BERT in the following ways:
+0. trained on American-English child-directed speech; ~5M words vs ~2B words 
+1. fewer hidden units and layers - ~11M parameters vs ~100M
+2. smaller vocabulary - ~8K vs ~30K
+3. no next-sentence prediction objective
+4. only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
+5. no learning rate schedule
+6. smaller batch size (16), and larger learning rate (1e-4)
+7. each training example is seen exactly once, thus number of epochs = 1,
+ and the same word is never masked more than once in the same utterance
+8. training examples are ordered by the age of the child to whom the utterance is directed to
+
 Contrary to the original BERT implementation, no next-sentence prediction objective is used during training, 
-as was done in the original implementation. This reduces training time, code complexity and [learning two separate semantic spaces](https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1117&context=scil).
+as was done in the original implementation. 
+This reduces training time, code complexity and [learning two separate semantic spaces](https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1117&context=scil).
 
 
 ## Using the code

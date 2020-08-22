@@ -12,10 +12,10 @@ class Dirs:
 
 class Data:
     uncased = True  # make sure the correct Google vocab is loaded, e.g. bert-base-uncased-vocab.txt
-    min_seq_length = 2
+    min_seq_length = 3
     max_seq_length = 128  # before word-piecing
     train_prob = 0.8  # probability that utterance is assigned to train split
-    special_symbols = ['[PAD]', '[UNK]', '[CLS]', '[SEP]', '[MASK]']  # order matters
+    special_symbols = ['[PAD]', '[UNK]', '[CLS]', '[SEP]', '[MASK]']
     childes_symbols = ['[NAME]', '[PLACE]', '[MISC]']
 
 
@@ -28,7 +28,6 @@ class Training:
 class Eval:
     interval = 10_000
     eval_at_step_zero = True
-    eval_at_end = False
     batch_size = 512
 
     probing_names = [
