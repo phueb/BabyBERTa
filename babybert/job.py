@@ -154,28 +154,27 @@ def main(param2val):
 
             is_first_time_in_loop = False
 
-            # eval MLM
+            # eval
             if step % configs.Eval.interval == 0 and step not in evaluated_steps:
                 evaluated_steps.append(step)
                 is_evaluated_at_current_step = True
                 model.eval()
 
                 # pp
-                print('Computing train pp...')
-                train_pp = evaluate_pp(model, tokenizer, train_data[:len(devel_data)])
-                print('Computing devel pp...')
-                devel_pp = evaluate_pp(model, tokenizer, devel_data)
-                name2xy['train_pps'].append((step, train_pp))
-                name2xy['devel_pps'].append((step, devel_pp))
-
-                print(f'train-pp={train_pp}', flush=True)
-                print(f'devel-pp={devel_pp}', flush=True)
+                skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
+                if not skip_pp:
+                    print('Computing train pp...', flush=True)
+                    train_pp = evaluate_pp(model, tokenizer, train_data[:len(devel_data)])
+                    print('Computing devel pp...', flush=True)
+                    devel_pp = evaluate_pp(model, tokenizer, devel_data)
+                    name2xy['train_pps'].append((step, train_pp))
+                    name2xy['devel_pps'].append((step, devel_pp))
+                    print(f'train-pp={train_pp}', flush=True)
+                    print(f'devel-pp={devel_pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
-                skip_probing = step == 0 and not configs.Eval.eval_at_step_zero
-                if not skip_probing:
-                    for task_name in configs.Eval.probing_names:
-                        do_probing(task_name, save_path, probing_path, tokenizer, model, step)
+                for task_name in configs.Eval.probing_names:
+                    do_probing(task_name, save_path, probing_path, tokenizer, model, step)
 
                 if max_step - step < configs.Eval.interval: # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)

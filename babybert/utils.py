@@ -70,7 +70,7 @@ def evaluate_pp(model: BertForPreTraining,
 
 def split(data: Iterator, seed: int = 2):
 
-    print(f'Slitting utterances into train/devel/test sets...')
+    print(f'Splitting utterances into train/devel/test sets...')
 
     random.seed(seed)
 

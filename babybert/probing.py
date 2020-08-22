@@ -36,7 +36,7 @@ def predict_open_ended(model: BertForPreTraining,
             logits_for_masked_words = np.squeeze(logits_3d[mask_locations])
             token_ids = [np.argmax(logits).item() for logits in logits_for_masked_words]
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
-            assert len(predicted_words) == len(logits_3d)
+            assert len(predicted_words) == len(logits_3d)  # number of mask symbols should be number of sentences
 
             res += predicted_words
 

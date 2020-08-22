@@ -78,7 +78,7 @@ def make_vocab(childes_vocab_file: Path,
         to_index += sorted(set(childes_vocab + google_vocab_cleaned))
     elif google_vocab_rule == 'exclusive':
         to_index += google_vocab_cleaned
-    elif google_vocab_rule == 'excluded':
+    elif google_vocab_rule == 'none':
         to_index += childes_vocab
     else:
         raise AttributeError('Invalid arg to "google_vocab_rule".')
@@ -108,7 +108,7 @@ def make_vocab(childes_vocab_file: Path,
 
 
 def load_utterances_from_file(file_path: Path,
-                              training_order: str,
+                              training_order: str = 'none',
                               verbose: bool = True,
                               allow_discard: bool = False) -> List[List[str]]:
     """
@@ -118,7 +118,7 @@ def load_utterances_from_file(file_path: Path,
     print(f'Loading {file_path}')
 
     # when lower-casing, do not lower-case upper-cased symbols
-    upper_cased = set(configs.Data.childes_symbols)
+    upper_cased = set(configs.Data.special_symbols + configs.Data.childes_symbols)
 
     res = []
     punctuation = {'.', '?', '!'}
@@ -172,7 +172,7 @@ def load_utterances_from_file(file_path: Path,
         print(f'Mean   utterance length: {np.mean(lengths):.2f}')
         print(f'Median utterance length: {np.median(lengths):.2f}')
 
-    if training_order == 'age-ordered':
+    if training_order in ['none', 'age-ordered']:
         pass
     elif training_order == 'age-reversed':
         res = res[::-1]

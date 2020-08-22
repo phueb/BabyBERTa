@@ -24,7 +24,7 @@ class Training:
 
 class Eval:
     interval = 10_000
-    eval_at_step_zero = True
+    eval_pp_at_step_zero = False
     batch_size = 512
 
     probing_names = [
