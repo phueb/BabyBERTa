@@ -1,11 +1,9 @@
 
 param2requests = {
-    'training_order': ['age-ordered', 'age-reversed']  # TODO
+    'training_order': ['age-ordered', 'age-reversed'],  # TODO
+    'include_punctuation': [False],  # TODO test
 }
 
-# With num_masked=1, made 0,575,465 instances -> 035,966 train MLM batches (when batch-size=16)
-# With num_masked=3, made XXXXXXXXX instances -> 107,964 train MLM batches (when batch-size=16)
-# With num_masked=6, made 2,976,614 instances -> 186,038 train MLM batches (when batch-size=16)
 
 param2debug = {
     'num_masked': 1,
@@ -14,6 +12,7 @@ param2debug = {
 }
 
 param2default = {
+    'include_punctuation': True,
     'batch_size': 16,
     'lr': 1e-4,
     'training_order': 'none',

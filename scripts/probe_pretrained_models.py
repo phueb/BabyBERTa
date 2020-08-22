@@ -1,11 +1,11 @@
-from typing import Dict
-from collections import OrderedDict
 from transformers import BertTokenizer, BertConfig, BertForPreTraining
 import torch
 
 from babybert import configs
 from babybert.probing import do_probing
 
+
+INCLUDE_PUNCTUATION = True
 
 if __name__ == '__main__':
 
@@ -34,11 +34,12 @@ if __name__ == '__main__':
 
         step = path_to_bin.name.split('_')[-2]
         rep_name = path_to_bin.name.split('_')[-3]
-        save_path = configs.Dirs.local_probing_results / architecture_name / rep_name / 'saves'
+        save_path = configs.Dirs.probing_results / architecture_name / rep_name / 'saves'
 
         # for each probing task
         for task_name in configs.Eval.probing_names:
-            do_probing(task_name, save_path, configs.Dirs.probing_sentences, tokenizer, model, step)
+            do_probing(task_name, save_path, configs.Dirs.probing_sentences, tokenizer, model, step,
+                       INCLUDE_PUNCTUATION)
 
 
 

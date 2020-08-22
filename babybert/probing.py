@@ -82,6 +82,7 @@ def do_probing(task_name: str,
                tokenizer: BertTokenizer,
                model: BertForPreTraining,
                step: int,
+               include_punctuation: bool,
                ) -> None:
 
     model.eval()
@@ -94,7 +95,7 @@ def do_probing(task_name: str,
             print(f'WARNING: {sentences_in_path} does not exist', flush=True)
             continue
         print(f'Starting probing with task={task_name}', flush=True)
-        sentences_in = load_utterances_from_file(sentences_in_path)
+        sentences_in = load_utterances_from_file(sentences_in_path, include_punctuation=include_punctuation)
 
         # prepare out path
         probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'

@@ -20,6 +20,7 @@ from babybert.probing import do_probing
 
 @attr.s
 class Params(object):
+    include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
     batch_size = attr.ib(validator=attr.validators.instance_of(int))
     lr = attr.ib(validator=attr.validators.instance_of(float))
     training_order = attr.ib(validator=attr.validators.instance_of(str))
@@ -78,12 +79,13 @@ def main(param2val):
     tokenizer = BertTokenizer(custom_vocab_path, do_lower_case=False, do_basic_tokenize=False)
     print(f'Number of types in word-piece tokenizer={len(vocab):,}\n', flush=True)
 
-    # load utterances for MLM
-    utterances = load_utterances_from_file(data_path_mlm, params.training_order, allow_discard=True)
-    # mask words systematically, and get labels
-    tmp1 = do_masking(utterances, params.num_masked)
-    # split into train, devel, test
-    train_data, devel_data, test_data = split(tmp1)  # each is a tuple e.g. (masked_utterances, masked_word)
+    # load utterances for MLM + do masking
+    utterances = load_utterances_from_file(data_path_mlm,
+                                           training_order=params.training_order,
+                                           include_punctuation=params.include_punctuation,
+                                           allow_discard=True)
+    # each is a tuple with elements: (masked_utterances, masked_word)
+    train_data, devel_data, test_data = split(do_masking(utterances, params.num_masked))
 
     # BERT
     print('Preparing BERT...')
@@ -119,8 +121,8 @@ def main(param2val):
     is_first_time_in_loop = True
 
     # train + eval loop
-    for epoch_id in range(params.num_epochs):
-        for train_batch in gen_batches_with_labels(train_data, params.batch_size):  # TODO use num_epochs
+    for epoch_id in range(params.num_epochs):  # TODO test epochs
+        for train_batch in gen_batches_with_labels(train_data, params.batch_size):
 
             # print(optimizer.param_groups[0]["lr"])  # TODO test lr schedule
 
@@ -146,10 +148,12 @@ def main(param2val):
                 loss = loss_fct(logits_for_masked_words,  # [batch size, vocab size]
                                 masked_word_token_ids.view(-1))  # [batch size]
 
-                # backward + update  # TODO scale gradients to norm=1.0
+                # backward + update
                 loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # otherwise only punctuation is predicted
                 optimizer.step()
-                optimizer.zero_grad()
+                optimizer.zero_grad()  # needed ?
+                model.zero_grad()
                 step += 1
 
             is_first_time_in_loop = False
@@ -174,7 +178,7 @@ def main(param2val):
 
                 # probing - test sentences for specific syntactic tasks
                 for task_name in configs.Eval.probing_names:
-                    do_probing(task_name, save_path, probing_path, tokenizer, model, step)
+                    do_probing(task_name, save_path, probing_path, tokenizer, model, step, params.include_punctuation)
 
                 if max_step - step < configs.Eval.interval: # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)

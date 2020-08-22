@@ -5,7 +5,7 @@ class Dirs:
     root = Path(__file__).parent.parent
     data = root / 'data'
     probing_sentences = Path('/') / 'media' / 'research_data' / 'Babeval' / 'sentences'
-    local_probing_results = Path.home() / 'Babeval_phueb' / 'runs'
+    probing_results = Path.home() / 'Babeval_phueb' / 'runs'
     # probing data can be found at https://github.com/phueb/Babeval/tree/master/sentences
 
 

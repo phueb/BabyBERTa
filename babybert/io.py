@@ -109,8 +109,10 @@ def make_vocab(childes_vocab_file: Path,
 
 def load_utterances_from_file(file_path: Path,
                               training_order: str = 'none',
+                              include_punctuation: bool = True,
                               verbose: bool = True,
-                              allow_discard: bool = False) -> List[List[str]]:
+                              allow_discard: bool = False,
+                              ) -> List[List[str]]:
     """
     load utterances for language modeling from text file
     """
@@ -157,6 +159,9 @@ def load_utterances_from_file(file_path: Path,
                 if configs.Data.uncased:
                     utterance = [w if w in upper_cased else w.lower()
                                  for w in utterance]
+
+                if not include_punctuation:
+                    utterance = [w for w in utterance if w not in punctuation]
 
                 res.append(utterance)
 
