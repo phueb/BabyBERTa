@@ -49,12 +49,15 @@ This reduces training time, code complexity and [learning two separate semantic 
 
 Code in this repository is executed using `Ludwig`,
  a library for running GPU-bound Python jobs on dedicated machines owned by the UIUC Learning & Language Lab.
+ 
+You will also need to obtain test sentences,
+ and point `configs.Dirs.probing_sentneces` to the folder where you saved them on your machine.
 
 ### Pre-training from scratch
 
-to run 10 replications of each configuration, in the terminal,
+To run 10 replications of each configuration on your machine, type the following into the terminal:
 
-`ludwig -r10`
+`ludwig -r10 -i`
 
 ### Probing pre-trained models
 
