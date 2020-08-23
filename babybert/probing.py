@@ -29,12 +29,12 @@ def predict_open_ended(model: BertForPreTraining,
 
             # get logits for all words in batch
             output = model(**batch.to('cuda'))
-            logits_3d = output[0].detach().cpu().numpy()
+            logits_3d = output[0].detach()
 
             # get predicted words for masked locations
-            mask_locations = np.where(batch.data['input_ids'].cpu() == tokenizer.mask_token_id)  # (row ids, col ids)
-            logits_for_masked_words = np.squeeze(logits_3d[mask_locations])
-            token_ids = [np.argmax(logits).item() for logits in logits_for_masked_words]
+            mask_locations = batch.data['input_ids'] == tokenizer.mask_token_id
+            logits_for_masked_words = logits_3d[mask_locations]  # 2D index into 3D array -> 2D array [batch, vocab]
+            token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
             assert len(predicted_words) == len(logits_3d)  # number of mask symbols should be number of sentences
 
