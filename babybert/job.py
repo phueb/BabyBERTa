@@ -165,7 +165,7 @@ def main(param2val):
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
                     print('Computing train pp...', flush=True)
-                    train_pp = evaluate_pp(model, tokenizer, train_data[:len(devel_data)])
+                    train_pp = evaluate_pp(model, tokenizer, train_data)
                     print('Computing devel pp...', flush=True)
                     devel_pp = evaluate_pp(model, tokenizer, devel_data)
                     name2xy['train_pps'].append((step, train_pp))
