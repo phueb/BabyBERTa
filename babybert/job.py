@@ -12,7 +12,6 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
 from babybert.io import load_utterances_from_file
-from babybert.memory import set_memory_limit
 from babybert.io import make_vocab
 from babybert.utils import evaluate_pp, split, gen_batches_with_labels, do_masking
 from babybert.probing import do_probing
@@ -47,8 +46,6 @@ class Params(object):
 
 
 def main(param2val):
-
-    set_memory_limit(prop=0.9)
 
     # params
     params = Params.from_param2val(param2val)
