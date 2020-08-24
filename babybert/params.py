@@ -1,6 +1,6 @@
 
 param2requests = {
-    'training_order': ['age-ordered', 'age-reversed'],  # TODO
+    'training_order': ['age-ordered', 'age-reversed'],
     'include_punctuation': [True],  # TODO test
 }
 
