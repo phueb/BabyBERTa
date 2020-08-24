@@ -29,6 +29,7 @@ BabyBERT is inspired by the original BERT model, but departs from it in many way
  
 Because our goal is to work with a compact model, optimized for acquiring distributional knowledge about child-directed speech,
  rather than some down-stream application, BabyBERT differs from the original BERT in the following ways:
+ 
 0. trained on American-English child-directed speech; ~5M words vs ~2B words 
 1. fewer hidden units and layers - ~11M parameters vs ~100M
 2. smaller vocabulary - ~8K vs ~30K
