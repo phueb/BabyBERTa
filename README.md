@@ -49,11 +49,17 @@ This reduces training time, code complexity and [learning two separate semantic 
 
 ## Using the code
 
-Code in this repository is executed using `Ludwig`,
+Code in this repository is executed using [Ludwig](https://github.com/phueb/Ludwig),
  a library for running GPU-bound Python jobs on dedicated machines owned by the UIUC Learning & Language Lab.
+
+To install all the dependencies, including `Ludwig`:
+
+```python
+pip3 install -r requirements.txt
+```
  
 You will also need to obtain test sentences,
- and point `configs.Dirs.probing_sentneces` to the folder where you saved them on your machine.
+ and point `configs.Dirs.probing_sentences` to the folder where you saved them on your machine.
 
 ### Pre-training from scratch
 
