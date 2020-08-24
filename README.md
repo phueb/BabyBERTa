@@ -38,8 +38,9 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 5. only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
 6. no learning rate schedule: constant vs. linear warmup + decay
 7. smaller batch size: 16 vs. 256
-8. only 1 complete pass through training data: 1 epoch vs. ~30 epochs
+8. only 1 complete pass through training data: 1 epoch vs. ~40 epochs
 9. training examples are ordered by the age of the child to whom the utterance is directed to
+10. examples consist of 1 utterance, as opposed to a pair of segments containing multiple sentences
 
 Contrary to the original BERT implementation, no next-sentence prediction objective is used during training, 
 as was done in the original implementation. 
