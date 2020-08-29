@@ -104,7 +104,9 @@ def do_probing(task_name: str,
 
         # save param2val
         param_path = save_path.parent.parent
-        if not param_path.exists():
+        if not param_path.is_dir():
+            param_path.mkdir(parents=True, exist_ok=True)
+        if not (param_path / 'param2val.yaml').exists():
             save_yaml_file(param2val_path=param_path / 'param2val.yaml', architecture=param_path.name)
 
         # do inference on forced-choice task
