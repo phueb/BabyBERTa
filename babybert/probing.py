@@ -76,9 +76,8 @@ def predict_forced_choice(model: BertForPreTraining,
     return cross_entropies
 
 
-def do_probing(task_name: str,
-               save_path: Path,
-               probing_path: Path,
+def do_probing(save_path: Path,
+               sentences_in_path: Path,
                tokenizer: BertTokenizer,
                model: BertForPreTraining,
                step: int,
@@ -87,37 +86,34 @@ def do_probing(task_name: str,
 
     model.eval()
 
-    for task_type in ['forced_choice', 'open_ended']:
+    task_name = sentences_in_path.stem
+    task_type = sentences_in_path.parent.name
 
-        # load probing sentences
-        sentences_in_path = probing_path / task_type / f'{task_name}.txt'
-        if not sentences_in_path.exists():
-            print(f'WARNING: {sentences_in_path} does not exist', flush=True)
-            continue
-        print(f'Starting probing with task={task_name}', flush=True)
-        sentences_in = load_utterances_from_file(sentences_in_path, include_punctuation=include_punctuation)
+    # load probing sentences
+    print(f'Starting probing with task={task_name}', flush=True)
+    sentences_in = load_utterances_from_file(sentences_in_path, include_punctuation=include_punctuation)
 
-        # prepare out path
-        probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
-        if not probing_results_path.parent.exists():
-            probing_results_path.parent.mkdir(exist_ok=True, parents=True)
+    # prepare out path
+    probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
+    if not probing_results_path.parent.exists():
+        probing_results_path.parent.mkdir(exist_ok=True, parents=True)
 
-        # save param2val
-        param_path = save_path.parent.parent
-        if not param_path.is_dir():
-            param_path.mkdir(parents=True, exist_ok=True)
-        if not (param_path / 'param2val.yaml').exists():
-            save_yaml_file(param2val_path=param_path / 'param2val.yaml', architecture=param_path.name)
+    # save param2val
+    param_path = save_path.parent.parent
+    if not param_path.is_dir():
+        param_path.mkdir(parents=True, exist_ok=True)
+    if not (param_path / 'param2val.yaml').exists():
+        save_yaml_file(param2val_path=param_path / 'param2val.yaml', architecture=param_path.name)
 
-        # do inference on forced-choice task
-        if task_type == 'forced_choice':
-            cross_entropies = predict_forced_choice(model, tokenizer, sentences_in)
-            save_forced_choice_predictions(sentences_in, cross_entropies, probing_results_path)
+    # do inference on forced-choice task
+    if task_type == 'forced_choice':
+        cross_entropies = predict_forced_choice(model, tokenizer, sentences_in)
+        save_forced_choice_predictions(sentences_in, cross_entropies, probing_results_path)
 
-        # do inference on open_ended task
-        elif task_type == 'open_ended':
-            sentences_out = predict_open_ended(model, tokenizer, sentences_in)
-            save_open_ended_predictions(sentences_in, sentences_out, probing_results_path,
-                                        verbose=True if 'dummy' in task_name else False)
-        else:
-            raise AttributeError('Invalid arg to "task_type".')
+    # do inference on open_ended task
+    elif task_type == 'open_ended':
+        sentences_out = predict_open_ended(model, tokenizer, sentences_in)
+        save_open_ended_predictions(sentences_in, sentences_out, probing_results_path,
+                                    verbose=True if 'dummy' in task_name else False)
+    else:
+        raise AttributeError('Invalid arg to "task_type".')

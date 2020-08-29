@@ -41,9 +41,8 @@ if __name__ == '__main__':
             save_path = configs.Dirs.probing_results / architecture_path.name / rep_name / 'saves'
 
             # for each probing task
-            for task_name in configs.Eval.probing_names:
-                do_probing(task_name, save_path, configs.Dirs.probing_sentences, tokenizer, model, step,
-                           INCLUDE_PUNCTUATION)
+            for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
+                do_probing(save_path, sentences_path, tokenizer, model, step, INCLUDE_PUNCTUATION)
 
 
 

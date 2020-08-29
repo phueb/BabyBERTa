@@ -42,10 +42,8 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 9. training examples are ordered by the age of the child to whom the utterance is directed to
 10. examples consist of 1 utterance, as opposed to a pair of segments containing multiple sentences
 
-Contrary to the original BERT implementation, no next-sentence prediction objective is used during training, 
-as was done in the original implementation. 
-This reduces training time, code complexity and [learning two separate semantic spaces](https://scholarworks.umass.edu/cgi/viewcontent.cgi?article=1117&context=scil).
-
+The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
+To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.
 
 ## Using the code
 

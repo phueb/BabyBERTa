@@ -13,25 +13,31 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from babybert import configs
 from babybert.io import load_utterances_from_file
 from babybert.io import make_vocab
-from babybert.utils import evaluate_pp, split, gen_batches_with_labels, do_masking
+from babybert.utils import evaluate_pp, split, gen_batches_with_labels, do_masking, combine, concatenate_utterances
 from babybert.probing import do_probing
 
 
 @attr.s
 class Params(object):
-    include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
-    batch_size = attr.ib(validator=attr.validators.instance_of(int))
-    lr = attr.ib(validator=attr.validators.instance_of(float))
+    # data
+    num_utterances_per_input = attr.ib(validator=attr.validators.instance_of(int))
     training_order = attr.ib(validator=attr.validators.instance_of(str))
-    num_layers = attr.ib(validator=attr.validators.instance_of(int))
-    hidden_size = attr.ib(validator=attr.validators.instance_of(int))
-    num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
-    intermediate_size = attr.ib(validator=attr.validators.instance_of(int))
-    num_epochs = attr.ib(validator=attr.validators.instance_of(int))
+    include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
     num_masked = attr.ib(validator=attr.validators.instance_of(int))
     childes_vocab_size = attr.ib(validator=attr.validators.instance_of(int))
     google_vocab_rule = attr.ib(validator=attr.validators.instance_of(str))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))
+
+    # training
+    batch_size = attr.ib(validator=attr.validators.instance_of(int))
+    lr = attr.ib(validator=attr.validators.instance_of(float))
+    num_epochs = attr.ib(validator=attr.validators.instance_of(int))
+
+    # model
+    num_layers = attr.ib(validator=attr.validators.instance_of(int))
+    hidden_size = attr.ib(validator=attr.validators.instance_of(int))
+    num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
+    intermediate_size = attr.ib(validator=attr.validators.instance_of(int))
 
     @classmethod
     def from_param2val(cls, param2val):
@@ -82,22 +88,24 @@ def main(param2val):
                                            include_punctuation=params.include_punctuation,
                                            allow_discard=True)
     # each is a tuple with elements: (masked_utterances, masked_word)
-    train_data, devel_data, test_data = split(do_masking(utterances, params.num_masked))
+    train_data, devel_data, test_data = split(combine(do_masking(utterances,
+                                                                 params.num_masked),
+                                                      params.num_utterances_per_input))
 
     # BERT
     print('Preparing BERT...')
-    bert_config = BertConfig(vocab_size=len(tokenizer.vocab),  # was 32K
-                             hidden_size=params.hidden_size,  # was 768
-                             num_hidden_layers=params.num_layers,  # was 12
-                             num_attention_heads=params.num_attention_heads,  # was 12
-                             intermediate_size=params.intermediate_size,    # was 3072
+    bert_config = BertConfig(vocab_size=len(tokenizer.vocab),
+                             hidden_size=params.hidden_size,
+                             num_hidden_layers=params.num_layers,
+                             num_attention_heads=params.num_attention_heads,
+                             intermediate_size=params.intermediate_size,
                              )
     model = BertForPreTraining(config=bert_config)
     print('Number of parameters: {:,}\n'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 
     # optimizer + lr schedule
-    optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)
+    optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
     max_step = len(train_data) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
     # get_linear_schedule_with_warmup(optimizer, num_warmup_steps=10_000, num_training_steps=max_step)  # TODO
@@ -125,11 +133,13 @@ def main(param2val):
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 model.train()
-                masked_utterances, masked_words = zip(*train_batch)
+
+                # possibly, concatenate multiple utterances into 1 input sequence
+                masked_sequences, masked_words = concatenate_utterances(train_batch)
 
                 # forward MLM
-                batch = tokenizer(masked_utterances,
-                                  padding=True,
+                batch = tokenizer(masked_sequences,
+                                  padding=True,  # pad to max sequence in batch
                                   return_tensors="pt",
                                   is_pretokenized=True)
                 output = model(**batch.to('cuda'))
@@ -142,8 +152,8 @@ def main(param2val):
                                                      dtype=torch.long,
                                                      requires_grad=False)
                 logits_for_masked_words = logits_2d[batch.data['input_ids'].view(-1) == tokenizer.mask_token_id]
-                loss = loss_fct(logits_for_masked_words,  # [batch size, vocab size]
-                                masked_word_token_ids.view(-1))  # [batch size]
+                loss = loss_fct(logits_for_masked_words,  # [num masks in batch, vocab size]
+                                masked_word_token_ids.view(-1))  # [num masks in batch]
 
                 # backward + update
                 loss.backward()
@@ -165,17 +175,19 @@ def main(param2val):
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
                     print('Computing train pp...', flush=True)
-                    train_pp = evaluate_pp(model, tokenizer, train_data)
+                    train_pp = np.nan if params.num_utterances_per_input != 1 else evaluate_pp(model, tokenizer,
+                                                                                               train_data)
                     print('Computing devel pp...', flush=True)
-                    devel_pp = evaluate_pp(model, tokenizer, devel_data)
+                    devel_pp = np.nan if params.num_utterances_per_input != 1 else evaluate_pp(model, tokenizer,
+                                                                                               devel_data)
                     name2xy['train_pps'].append((step, train_pp))
                     name2xy['devel_pps'].append((step, devel_pp))
                     print(f'train-pp={train_pp}', flush=True)
                     print(f'devel-pp={devel_pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
-                for task_name in configs.Eval.probing_names:
-                    do_probing(task_name, save_path, probing_path, tokenizer, model, step, params.include_punctuation)
+                for sentences_path in probing_path.rglob('*.txt'):
+                    do_probing(save_path, sentences_path, tokenizer, model, step, params.include_punctuation)
 
                 if max_step - step < configs.Eval.interval: # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)

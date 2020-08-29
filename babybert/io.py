@@ -148,10 +148,10 @@ def load_utterances_from_file(file_path: Path,
                     continue
 
                 # check  length
-                if len(utterance) < configs.Data.min_seq_length and allow_discard:
+                if len(utterance) < configs.Data.min_utterance_length and allow_discard:
                     num_too_small += 1
                     continue
-                if len(utterance) > configs.Data.max_seq_length and allow_discard:
+                if len(utterance) > configs.Data.max_utterance_length and allow_discard:
                     num_too_large += 1
                     continue
 
@@ -163,11 +163,15 @@ def load_utterances_from_file(file_path: Path,
                 if not include_punctuation:
                     utterance = [w for w in utterance if w not in punctuation]
 
+                # prevent tokenization of long words into lots of word pieces TODO test
+                if configs.Data.max_word_length is not None:
+                    utterance = [w if len(w) < configs.Data.max_word_length else '[LONG]'
+                                 for w in utterance]
                 res.append(utterance)
 
     if num_too_small or num_too_large:
-        print(f'WARNING: Skipped {num_too_small} utterances which are shorter than {configs.Data.min_seq_length}.')
-        print(f'WARNING: Skipped {num_too_large} utterances which are larger than {configs.Data.max_seq_length}.')
+        print(f'WARNING: Skipped {num_too_small} utterances which are shorter than {configs.Data.min_utterance_length}.')
+        print(f'WARNING: Skipped {num_too_large} utterances which are larger than {configs.Data.max_utterance_length}.')
 
     if verbose:
         lengths = [len(u) for u in res]

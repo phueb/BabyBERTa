@@ -11,11 +11,12 @@ class Dirs:
 
 class Data:
     uncased = True  # make sure the correct Google vocab is loaded, e.g. bert-base-uncased-vocab.txt
-    min_seq_length = 3
-    max_seq_length = 128  # before word-piecing
+    min_utterance_length = 3
+    max_utterance_length = 32  # before word-piecing and concatenation of utterances
+    max_word_length = 20  # reduces amount of word-pieces for long words
     train_prob = 0.8  # probability that utterance is assigned to train split
     special_symbols = ['[PAD]', '[UNK]', '[CLS]', '[SEP]', '[MASK]']
-    childes_symbols = ['[NAME]', '[PLACE]', '[MISC]']
+    childes_symbols = ['[NAME]', '[PLACE]', '[MISC]'] + ['[LONG]']
 
 
 class Training:
@@ -23,17 +24,7 @@ class Training:
 
 
 class Eval:
-    interval = 10_000
+    interval = 20_000
     eval_pp_at_step_zero = False
     batch_size = 512
 
-    probing_names = [
-        'dummy',
-        'agreement_across_1_adjective',
-        'agreement_across_2_adjectives',
-        'agreement_between_neighbors',
-        'agreement_across_PP',
-        'agreement_across_RC',
-        'agreement_in_1_verb_question',
-        'agreement_in_2_verb_question',
-    ]

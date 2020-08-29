@@ -6,6 +6,7 @@
 [NAME]
 [PLACE]
 [MISC]
+[LONG]
 .
 ?
 you
