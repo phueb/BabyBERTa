@@ -32,6 +32,7 @@ class Params(object):
     batch_size = attr.ib(validator=attr.validators.instance_of(int))
     lr = attr.ib(validator=attr.validators.instance_of(float))
     num_epochs = attr.ib(validator=attr.validators.instance_of(int))
+    num_warmup_steps = attr.ib(validator=attr.validators.instance_of(int))
 
     # model
     num_layers = attr.ib(validator=attr.validators.instance_of(int))
@@ -108,7 +109,9 @@ def main(param2val):
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
     max_step = len(train_data) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
-    # get_linear_schedule_with_warmup(optimizer, num_warmup_steps=10_000, num_training_steps=max_step)  # TODO
+    scheduler = get_linear_schedule_with_warmup(optimizer,
+                                                num_warmup_steps=params.num_warmup_steps,
+                                                num_training_steps=max_step)
 
     # init performance collection
     name2xy = {
@@ -124,12 +127,12 @@ def main(param2val):
     step = 0
     is_evaluated_at_current_step = False
     is_first_time_in_loop = True
+    eval_batch_size = configs.Eval.batch_size // params.num_utterances_per_input  # reduce chance of CUDA memory error
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):  # TODO test epochs
         for train_batch in gen_batches_with_labels(train_data, params.batch_size):
 
-            # print(optimizer.param_groups[0]["lr"])  # TODO test lr schedule
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 model.train()
@@ -159,6 +162,7 @@ def main(param2val):
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # otherwise only punctuation is predicted
                 optimizer.step()
+                scheduler.step()
                 optimizer.zero_grad()  # needed ?
                 model.zero_grad()
                 step += 1
@@ -175,11 +179,9 @@ def main(param2val):
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
                     print('Computing train pp...', flush=True)
-                    train_pp = np.nan if params.num_utterances_per_input != 1 else evaluate_pp(model, tokenizer,
-                                                                                               train_data)
+                    train_pp = evaluate_pp(model, tokenizer, train_data, eval_batch_size)
                     print('Computing devel pp...', flush=True)
-                    devel_pp = np.nan if params.num_utterances_per_input != 1 else evaluate_pp(model, tokenizer,
-                                                                                               devel_data)
+                    devel_pp = evaluate_pp(model, tokenizer, devel_data, eval_batch_size)
                     name2xy['train_pps'].append((step, train_pp))
                     name2xy['devel_pps'].append((step, devel_pp))
                     print(f'train-pp={train_pp}', flush=True)
@@ -199,6 +201,7 @@ def main(param2val):
                 pp = torch.exp(loss) if loss is not None else np.nan
                 print(f'epoch={epoch_id + 1:>3,}/{params.num_epochs} step={step:>9,}/{max_step:>9,}\n'
                       f'pp={pp :2.4f} \n'
+                      f'lr={scheduler.get_lr()[0]} \n'
                       f'total minutes elapsed={min_elapsed:<3}\n', flush=True)
                 is_evaluated_at_current_step = False
 

@@ -110,7 +110,7 @@ def make_vocab(childes_vocab_file: Path,
 def load_utterances_from_file(file_path: Path,
                               training_order: str = 'none',
                               include_punctuation: bool = True,
-                              verbose: bool = True,
+                              verbose: bool = False,
                               allow_discard: bool = False,
                               ) -> List[List[str]]:
     """

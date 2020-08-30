@@ -89,6 +89,7 @@ def split(data: Generator[List[Tuple[List[str], str]], None, None],
 def evaluate_pp(model: BertForPreTraining,
                 tokenizer: BertTokenizer,
                 data: List[List[Tuple[List[str], str]]],
+                batch_size: int,
                 ) -> float:
     model.eval()
 
@@ -96,7 +97,7 @@ def evaluate_pp(model: BertForPreTraining,
 
     pp_sum = torch.zeros(size=(1,)).cuda()
     num_steps = 0
-    for batch in gen_batches_with_labels(data, 512):
+    for batch in gen_batches_with_labels(data, batch_size):
         masked_utterances, masked_words = concatenate_utterances(batch)
 
         with torch.no_grad():
@@ -144,7 +145,7 @@ def gen_batches_with_labels(data: List[List[Tuple[List[str], str]]],
 
 
 def concatenate_utterances(train_batch: List[List[Tuple[List[str], str]]],
-                           ) -> Tuple[List[List[str], List[str]]]:
+                           ) -> Tuple[List[List[str]], List[str]]:
     """
     re-arrange data structure of batch for BERT tokenizer, which expects data of type List[List[str]]
 
@@ -158,13 +159,13 @@ def concatenate_utterances(train_batch: List[List[Tuple[List[str], str]]],
     to
     [concatenated utterances1, concatenated utterances2, ..] and [masked word1, masked word2, ...]
     """
-    masked_utterances, masked_words = [], []
+    masked_sequences, masked_words = [], []
 
     for combination in train_batch:
         us, ws = zip(*combination)
-        masked_utterances.append([])
+        masked_sequences.append([])
         for u, w in zip(us, ws):
-            masked_utterances[-1].extend(u)
+            masked_sequences[-1].extend(u)
             masked_words.append(w)
 
-    return masked_utterances, masked_words
+    return masked_sequences, masked_words
