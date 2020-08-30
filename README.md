@@ -36,7 +36,7 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 3. no next-sentence prediction objective (as in RoBERTa)
 4. dynamic masking: the same word is never masked more than once in the same utterance (as in RoBERTa)
 5. only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
-6. no learning rate schedule: constant vs. linear warmup + decay
+6. utterance-boundary punctuation is never masked
 7. smaller batch size: 16 vs. 256
 8. only 1 complete pass through training data: 1 epoch vs. ~40 epochs
 9. training examples are ordered by the age of the child to whom the utterance is directed to

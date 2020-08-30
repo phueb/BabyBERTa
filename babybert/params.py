@@ -1,8 +1,6 @@
 
 param2requests = {
-    'include_punctuation': [True],  # TODO test
-    'training_order': ['age-ordered'],
-    'num_warmup_steps': [0, 10_000],  # TODO test
+    'include_punctuation': [True, False],  # TODO test
 }
 
 
@@ -27,7 +25,7 @@ param2default = {
     'batch_size': 16,
     'lr': 1e-4,
     'num_epochs': 1,
-    'num_warmup_steps': 0,  # 0 is best
+    'num_warmup_steps': 10_000,  # slightly better than 0
 
     # model
     'hidden_size': 256,

@@ -163,7 +163,7 @@ def load_utterances_from_file(file_path: Path,
                 if not include_punctuation:
                     utterance = [w for w in utterance if w not in punctuation]
 
-                # prevent tokenization of long words into lots of word pieces TODO test
+                # prevent tokenization of long words into lots of word pieces
                 if configs.Data.max_word_length is not None:
                     utterance = [w if len(w) < configs.Data.max_word_length else '[LONG]'
                                  for w in utterance]
