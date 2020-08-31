@@ -30,20 +30,26 @@ BabyBERT is inspired by the original BERT model, but departs from it in many way
 Because our goal is to work with a compact model, optimized for acquiring distributional knowledge about child-directed speech,
  rather than some down-stream application, BabyBERT differs from the original BERT in the following ways:
  
-0. trained on American-English child-directed speech: ~5M words vs ~2B words 
-1. fewer hidden units and layers: ~10M parameters vs ~100M
-2. smaller vocabulary: ~8K vs ~30K
-3. no next-sentence prediction objective (as in RoBERTa)
-4. dynamic masking: the same word is never masked more than once in the same utterance (as in RoBERTa)
-5. only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
-6. utterance-boundary punctuation is never masked
-7. smaller batch size: 16 vs. 256
-8. only 1 complete pass through training data: 1 epoch vs. ~40 epochs
-9. training examples are ordered by the age of the child to whom the utterance is directed to
-10. examples consist of 1 utterance, as opposed to a pair of segments containing multiple sentences
+- trained on American-English child-directed speech: ~5M words vs ~2B words 
+- fewer hidden units and layers: ~10M parameters vs ~100M
+- smaller vocabulary: ~8K vs ~30K
+- no next-sentence prediction objective (as in RoBERTa)
+- dynamic masking: the same word is never masked more than once in the same utterance (as in RoBERTa)
+- only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
+- smaller batch size: 16 vs. 256
+- only 1 complete pass through training data: 1 epoch vs. ~40 epochs
+- training examples are ordered by the age of the child to whom the utterance is directed to
+- examples consist of 1 utterance, as opposed to a pair of segments containing multiple sentences
 
 The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
 To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.
+
+## Training observations
+
+Model performance on number-agreement degrades when both punctuation is included and punctuation tokens are never masked, 
+compared to when punctuation is included and punctuation tokens are not excluded from MLM.
+On emight think that excluding steps in which punctuation is predicted (there are 20K of these) woudl save training time,
+ without sacrificing performance, but results show that performance is significantly sacrificed. 
 
 ## Using the code
 

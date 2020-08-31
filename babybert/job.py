@@ -91,7 +91,6 @@ def main(param2val):
     # each is a tuple with elements: (masked_utterances, masked_word)
     train_data, devel_data, test_data = split(combine(do_masking(utterances,
                                                                  params.num_masked,
-                                                                 params.include_punctuation,
                                                                  ),
                                                       params.num_utterances_per_input))
 

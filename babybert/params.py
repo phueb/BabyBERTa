@@ -1,6 +1,5 @@
 
 param2requests = {
-    'include_punctuation': [True, False],  # TODO test
 }
 
 

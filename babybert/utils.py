@@ -10,7 +10,6 @@ from babybert import configs
 
 def do_masking(utterances: List[List[str]],
                num_masked: int,
-               include_punctuation: bool,
                ) -> Generator[Tuple[List[str], str], None, None]:
     """
     Prepare input for masked language modeling:
@@ -22,10 +21,6 @@ def do_masking(utterances: List[List[str]],
     print(f'Inserting masked symbols into utterances...')
 
     for u in utterances:
-
-        if include_punctuation:
-            u.pop()  # never mask punctuation so that results can be compared to setting without punctuation
-
         for loc in random.sample(range(len(u)), k=min(num_masked, len(u))):
             masked_utterance = [w if n != loc else '[MASK]' for n, w in enumerate(u)]
             masked_word = u[loc]
