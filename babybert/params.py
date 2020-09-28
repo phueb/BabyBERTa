@@ -1,5 +1,6 @@
 
 param2requests = {
+    'num_masked': [1, 2, 4, 6],
 }
 
 

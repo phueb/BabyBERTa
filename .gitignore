@@ -5,3 +5,5 @@
 .idea/*
 *.xml
 *.iml
+
+/data/corpora/newsela.txt

@@ -40,6 +40,8 @@ if __name__ == '__main__':
             rep_name = path_to_bin.name.split('_')[-3]
             save_path = configs.Dirs.probing_results / architecture_path.name / rep_name / 'saves'
 
+            assert configs.Dirs.probing_sentences.exists()
+
             # for each probing task
             for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
                 do_probing(save_path, sentences_path, tokenizer, model, step, INCLUDE_PUNCTUATION)
