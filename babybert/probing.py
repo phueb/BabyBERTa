@@ -2,9 +2,12 @@ from pathlib import Path
 from typing import Iterator, Tuple, List
 import numpy as np
 
+from transformers import RobertaTokenizerFast
+from transformers.modeling_roberta import create_position_ids_from_input_ids
+
 import torch
 from torch.nn import CrossEntropyLoss
-from transformers import BertForPreTraining, BertTokenizer
+from transformers import BertForPreTraining
 
 from babybert import configs
 from babybert.io import save_yaml_file
@@ -13,7 +16,7 @@ from babybert.io import load_utterances_from_file, save_forced_choice_prediction
 
 
 def predict_open_ended(model: BertForPreTraining,
-                       tokenizer: BertTokenizer,
+                       tokenizer: RobertaTokenizerFast,
                        sentences: List[List[str]],
                        ) -> List[List[str]]:
 
@@ -22,13 +25,13 @@ def predict_open_ended(model: BertForPreTraining,
     for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
 
         with torch.no_grad():
-            batch = tokenizer(sentences_in_batch,
-                              padding=True,
-                              return_tensors="pt",
-                              is_pretokenized=True)
+            batch = tokenizer.batch_encode_plus([' '.join(s) for s in sentences_in_batch],
+                                                padding=True,
+                                                return_tensors='pt')
+            position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
 
             # get logits for all words in batch
-            output = model(**batch.to('cuda'))
+            output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
             logits_3d = output[0].detach()
 
             # get predicted words for masked locations
@@ -36,7 +39,7 @@ def predict_open_ended(model: BertForPreTraining,
             logits_for_masked_words = logits_3d[mask_locations]  # 2D index into 3D array -> 2D array [batch, vocab]
             token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
-            assert len(predicted_words) == len(logits_3d)  # number of mask symbols should be number of sentences
+            assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))  # number of mask symbols should be number of sentences
 
             res += predicted_words
 
@@ -44,7 +47,7 @@ def predict_open_ended(model: BertForPreTraining,
 
 
 def predict_forced_choice(model: BertForPreTraining,
-                          tokenizer: BertTokenizer,
+                          tokenizer: RobertaTokenizerFast,
                           sentences: List[List[str]],
                           ) -> List[float]:
     cross_entropies = []
@@ -52,14 +55,14 @@ def predict_forced_choice(model: BertForPreTraining,
 
     for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
         with torch.no_grad():
-            batch = tokenizer(sentences_in_batch,
-                              padding=True,
-                              return_tensors="pt",
-                              is_pretokenized=True,
-                              return_attention_mask=True)
+            batch = tokenizer.batch_encode_plus([' '.join(s) for s in sentences_in_batch],
+                                                padding=True,
+                                                return_attention_mask=True,
+                                                return_tensors='pt')
+            position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
 
             # logits
-            output = model(**batch.to('cuda'))
+            output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
             logits_3d = output[0]
 
             # compute avg cross entropy per sentence
@@ -78,7 +81,7 @@ def predict_forced_choice(model: BertForPreTraining,
 
 def do_probing(save_path: Path,
                sentences_in_path: Path,
-               tokenizer: BertTokenizer,
+               tokenizer: RobertaTokenizerFast,
                model: BertForPreTraining,
                step: int,
                include_punctuation: bool,

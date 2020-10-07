@@ -33,6 +33,7 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - trained on American-English child-directed speech: ~5M words vs ~2B words 
 - fewer hidden units and layers: ~10M parameters vs ~100M
 - smaller vocabulary: ~8K vs ~30K
+- Byte-Pair BPE tokenization (as in RoBERTa)
 - no next-sentence prediction objective (as in RoBERTa)
 - dynamic masking: the same word is never masked more than once in the same utterance (as in RoBERTa)
 - only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
@@ -48,7 +49,7 @@ To achieve above-chance performance on number agreement, the model must not be t
 
 Model performance on number-agreement degrades when both punctuation is included and punctuation tokens are never masked, 
 compared to when punctuation is included and punctuation tokens are not excluded from MLM.
-On emight think that excluding steps in which punctuation is predicted (there are 20K of these) woudl save training time,
+One might think that excluding steps in which punctuation is predicted (there are 20K of these) would save training time,
  without sacrificing performance, but results show that performance is significantly sacrificed. 
 
 ## Using the code
@@ -58,7 +59,7 @@ Code in this repository is executed using [Ludwig](https://github.com/phueb/Ludw
 
 To install all the dependencies, including `Ludwig`:
 
-```python
+```python3
 pip3 install -r requirements.txt
 ```
  
@@ -67,13 +68,11 @@ You will also need to obtain test sentences,
 
 ### Pre-training from scratch
 
-To run 10 replications of each configuration on your machine, type the following into the terminal:
+To run 10 replications of each configuration on your machine,
+ edit the path to `Babeval` probing sentences in `configs.Dirs.probing_sentences`. 
+Then, type the following into the terminal:
 
 `ludwig -r10 -i`
-
-### Probing pre-trained models
-
-Run the script `scripts/probe_pretrained_models`
 
 ## Compatibility
 

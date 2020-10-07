@@ -3,7 +3,9 @@ import torch
 from torch.nn import CrossEntropyLoss
 from typing import Tuple, List, Iterator, Generator
 
-from transformers import BertForPreTraining, BertTokenizer
+from transformers import RobertaTokenizerFast
+
+from transformers import BertForPreTraining
 
 from babybert import configs
 
@@ -49,7 +51,7 @@ def combine(data: Generator[Tuple[List[str], str], None, None],
         try:
             combined = [next(data) for _ in range(num_utterances_per_input)]
         except StopIteration:
-            print(f'Num combination steps={safe_guard:,}')
+            print(f'Num total input sequences={safe_guard:,}')
             return
 
         yield combined
@@ -79,15 +81,15 @@ def split(data: Generator[List[Tuple[List[str], str]], None, None],
             else:
                 test.append(i)
 
-    print(f'num train={len(train):,}')
-    print(f'num devel={len(devel):,}')
-    print(f'num test ={len(test):,}')
+    print(f'num train sequences={len(train):,}')
+    print(f'num devel sequences={len(devel):,}')
+    print(f'num test  sequences={len(test):,}')
 
     return train, devel, test
 
 
 def evaluate_pp(model: BertForPreTraining,
-                tokenizer: BertTokenizer,
+                tokenizer: RobertaTokenizerFast,
                 data: List[List[Tuple[List[str], str]]],
                 batch_size: int,
                 ) -> float:
@@ -101,14 +103,13 @@ def evaluate_pp(model: BertForPreTraining,
         masked_utterances, masked_words = concatenate_utterances(batch)
 
         with torch.no_grad():
-            batch = tokenizer(masked_utterances,
-                              padding=True,
-                              return_tensors="pt",
-                              is_pretokenized=True,
-                              return_attention_mask=True)
+            batch = tokenizer.batch_encode_plus([' '.join(s) for s in masked_utterances],
+                                                padding=True,
+                                                return_tensors='pt')
+            position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
 
             # logits
-            output = model(**batch.to('cuda'))
+            output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
             logits_3d = output[0]
             logits_2d = logits_3d.view(-1, model.config.vocab_size)
 

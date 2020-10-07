@@ -39,74 +39,6 @@ def save_forced_choice_predictions(mlm_in,
                 print(line)
 
 
-def load_words_from_vocab_file(vocab_file: Path,
-                               col: int = 0):
-
-    res = []
-    with vocab_file.open("r", encoding="utf-8") as reader:
-        while True:
-            line = reader.readline()
-            if not line:
-                break
-            token = line.split()[col]
-
-            # exclude word with non-ASCII characters
-            if [True for c in token if ord(c) > 127]:
-                continue
-
-            res.append(token)
-    return res
-
-
-def make_vocab(childes_vocab_file: Path,
-               google_vocab_file: Path,
-               vocab_size: int,  # childes-vocab, not total vocab
-               google_vocab_rule: str) -> OrderedDict:
-
-    childes_vocab = load_words_from_vocab_file(childes_vocab_file, col=1)[:vocab_size]
-    google_vocab = load_words_from_vocab_file(google_vocab_file, col=0)
-
-    # exclude any google wordpieces not in CHILDES vocab, but leave non-start wordpieces (e.g. ##s)
-    google_vocab_cleaned = [w for w in google_vocab
-                            if w in set(childes_vocab) or w.startswith('##')]
-
-    # init
-    to_index = configs.Data.special_symbols + configs.Data.childes_symbols
-
-    # add from childes vocab
-    if google_vocab_rule == 'inclusive':
-        to_index += sorted(set(childes_vocab + google_vocab_cleaned))
-    elif google_vocab_rule == 'exclusive':
-        to_index += google_vocab_cleaned
-    elif google_vocab_rule == 'none':
-        to_index += childes_vocab
-    else:
-        raise AttributeError('Invalid arg to "google_vocab_rule".')
-
-    # index
-    res = OrderedDict()
-    index = 0
-    for token in to_index:
-        if token in res:
-            # happens for symbols
-            continue
-        res[token] = index
-        index += 1
-
-    assert len(set(res)) == len(res)
-    assert index == len(res), (index, len(res))
-
-    # the transformers.PreTrainedTokenizer doesn't respect the order below, but it doesn't matter.
-    # it's good to check this order here, so that the special tokens show up in first few lines in vocab file
-    assert res['[PAD]'] == 0
-    assert res['[UNK]'] == 1
-    assert res['[CLS]'] == 2
-    assert res['[SEP]'] == 3
-    assert res['[MASK]'] == 4
-
-    return res
-
-
 def load_utterances_from_file(file_path: Path,
                               training_order: str = 'none',
                               include_punctuation: bool = True,
@@ -120,7 +52,7 @@ def load_utterances_from_file(file_path: Path,
     print(f'Loading {file_path}')
 
     # when lower-casing, do not lower-case upper-cased symbols
-    upper_cased = set(configs.Data.special_symbols + configs.Data.childes_symbols)
+    upper_cased = set(configs.Data.childes_symbols + configs.Data.universal_symbols)
 
     res = []
     punctuation = {'.', '?', '!'}
@@ -156,7 +88,7 @@ def load_utterances_from_file(file_path: Path,
                     continue
 
                 # lower-case
-                if configs.Data.uncased:
+                if configs.Data.lowercase_input:
                     utterance = [w if w in upper_cased else w.lower()
                                  for w in utterance]
 
@@ -165,7 +97,7 @@ def load_utterances_from_file(file_path: Path,
 
                 # prevent tokenization of long words into lots of word pieces
                 if configs.Data.max_word_length is not None:
-                    utterance = [w if len(w) < configs.Data.max_word_length else '[LONG]'
+                    utterance = [w if len(w) < configs.Data.max_word_length else configs.Data.long_symbol
                                  for w in utterance]
                 res.append(utterance)
 

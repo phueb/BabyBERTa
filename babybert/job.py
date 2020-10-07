@@ -6,13 +6,14 @@ from pathlib import Path
 import torch
 from torch.nn import CrossEntropyLoss
 
-from transformers import BertTokenizer
+from transformers.modeling_roberta import create_position_ids_from_input_ids
+from transformers.tokenization_roberta import AddedToken
+from transformers import RobertaTokenizerFast
 from transformers import BertForPreTraining, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
 from babybert.io import load_utterances_from_file
-from babybert.io import make_vocab
 from babybert.utils import evaluate_pp, split, gen_batches_with_labels, do_masking, combine, concatenate_utterances
 from babybert.probing import do_probing
 
@@ -24,9 +25,8 @@ class Params(object):
     training_order = attr.ib(validator=attr.validators.instance_of(str))
     include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
     num_masked = attr.ib(validator=attr.validators.instance_of(int))
-    childes_vocab_size = attr.ib(validator=attr.validators.instance_of(int))
-    google_vocab_rule = attr.ib(validator=attr.validators.instance_of(str))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))
+    bbpe = attr.ib(validator=attr.validators.instance_of(str))
 
     # training
     batch_size = attr.ib(validator=attr.validators.instance_of(int))
@@ -61,8 +61,6 @@ def main(param2val):
     #  paths to data
     project_path = Path(param2val['project_path'])
     data_path_mlm = project_path / 'data' / 'corpora' / f'{params.corpus_name}.txt'
-    childes_vocab_path = project_path / 'data' / 'vocabulary' / f'{params.corpus_name}_vocab.txt'
-    google_vocab_path = project_path / 'data' / 'vocabulary' / 'bert-base-uncased-vocab.txt'  # to get word pieces
 
     # probing path - contains probing sentences
     probing_path = configs.Dirs.probing_sentences
@@ -75,13 +73,10 @@ def main(param2val):
     if not save_path.exists():
         save_path.mkdir(parents=True)
 
-    # word-piece tokenizer - defines input vocabulary
-    print(f'Loading vocab with google_vocab_rule={params.google_vocab_rule}...')
-    vocab = make_vocab(childes_vocab_path, google_vocab_path, params.childes_vocab_size, params.google_vocab_rule)
-    custom_vocab_path = project_path / 'data' / 'vocabulary' / 'effective_vocab.txt'
-    custom_vocab_path.open('w').write('\n'.join(vocab))
-    tokenizer = BertTokenizer(custom_vocab_path, do_lower_case=False, do_basic_tokenize=False)
-    print(f'Number of types in word-piece tokenizer={len(vocab):,}\n', flush=True)
+    # B-BPE tokenizer - defines input vocabulary
+    tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'vocab.json'),
+                                     merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'merges.txt'))
+    tokenizer.add_special_tokens({'mask_token': AddedToken('[MASK]', lstrip=True)})
 
     # load utterances for MLM + do masking
     utterances = load_utterances_from_file(data_path_mlm,
@@ -94,15 +89,15 @@ def main(param2val):
                                                                  ),
                                                       params.num_utterances_per_input))
 
-    # BERT
-    print('Preparing BERT...')
-    bert_config = BertConfig(vocab_size=len(tokenizer.vocab),
+    # BabyBERT
+    print('Preparing BabyBERT...')
+    bert_config = BertConfig(vocab_size=tokenizer.vocab_size,
                              hidden_size=params.hidden_size,
                              num_hidden_layers=params.num_layers,
                              num_attention_heads=params.num_attention_heads,
                              intermediate_size=params.intermediate_size,
                              )
-    model = BertForPreTraining(config=bert_config)
+    model = BertForPreTraining(config=bert_config)  # same as Roberta
     print('Number of parameters: {:,}\n'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 
@@ -142,11 +137,12 @@ def main(param2val):
                 masked_sequences, masked_words = concatenate_utterances(train_batch)
 
                 # forward MLM
-                batch = tokenizer(masked_sequences,
-                                  padding=True,  # pad to max sequence in batch
-                                  return_tensors="pt",
-                                  is_pretokenized=True)
-                output = model(**batch.to('cuda'))
+                batch = tokenizer.batch_encode_plus([' '.join(s) for s in masked_sequences],
+                                                    padding=True,
+                                                    return_tensors='pt')
+                position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
+
+                output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
                 logits_3d = output[0]
                 logits_2d = logits_3d.view(-1, model.config.vocab_size)
 

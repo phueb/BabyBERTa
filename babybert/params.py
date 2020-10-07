@@ -1,13 +1,12 @@
 
 param2requests = {
-    'num_masked': [1, 2, 4, 6],
+    # 'corpus_name': ['childes-20191206', 'newsela'],
 }
 
 
 param2debug = {
     'num_masked': 1,
     'num_layers': 2,
-    'google_vocab_rule': 'none',
     'num_utterances_per_input': 1,
 }
 
@@ -18,8 +17,7 @@ param2default = {
     'training_order': 'age-ordered',
     'num_masked': 6,
     'corpus_name': 'childes-20191206',
-    'childes_vocab_size': 4000,
-    'google_vocab_rule': 'inclusive',
+    'bbpe': 'c-16384',
 
     # training
     'batch_size': 16,

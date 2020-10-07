@@ -44,7 +44,11 @@ if __name__ == '__main__':
 
             # for each probing task
             for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
-                do_probing(save_path, sentences_path, tokenizer, model, step, INCLUDE_PUNCTUATION)
+
+                # TODO
+                raise NotImplementedError('Only works for TF BERT')
+
+                # do_probing(save_path, sentences_path, tokenizer, model, step, INCLUDE_PUNCTUATION)
 
 
 
