@@ -4,7 +4,7 @@ from torch.nn import CrossEntropyLoss
 from typing import Tuple, List, Iterator, Generator
 
 from transformers import RobertaTokenizerFast
-
+from transformers.modeling_roberta import create_position_ids_from_input_ids
 from transformers import BertForPreTraining
 
 from babybert import configs
