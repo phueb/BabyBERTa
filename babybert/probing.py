@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Iterator, Tuple, List
+from typing import Union, Tuple, List
 import numpy as np
 
 from transformers import RobertaTokenizerFast
@@ -7,7 +7,7 @@ from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 import torch
 from torch.nn import CrossEntropyLoss
-from transformers import BertForPreTraining
+from transformers import BertForPreTraining, BertTokenizerFast
 
 from babybert import configs
 from babybert.io import save_yaml_file
@@ -16,7 +16,7 @@ from babybert.io import load_utterances_from_file, save_forced_choice_prediction
 
 
 def predict_open_ended(model: BertForPreTraining,
-                       tokenizer: RobertaTokenizerFast,
+                       tokenizer: Union[RobertaTokenizerFast, BertTokenizerFast],
                        sentences: List[List[str]],
                        ) -> List[List[str]]:
 
@@ -25,7 +25,11 @@ def predict_open_ended(model: BertForPreTraining,
     for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
 
         with torch.no_grad():
-            batch = tokenizer.batch_encode_plus([' '.join(s) for s in sentences_in_batch],
+            if isinstance(tokenizer, RobertaTokenizerFast):
+                tokenizer_input = [' '.join(s) for s in sentences_in_batch]
+            else:
+                tokenizer_input = sentences_in_batch
+            batch = tokenizer.batch_encode_plus(tokenizer_input,
                                                 padding=True,
                                                 return_tensors='pt')
             position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
@@ -47,7 +51,7 @@ def predict_open_ended(model: BertForPreTraining,
 
 
 def predict_forced_choice(model: BertForPreTraining,
-                          tokenizer: RobertaTokenizerFast,
+                          tokenizer: Union[RobertaTokenizerFast, BertTokenizerFast],
                           sentences: List[List[str]],
                           ) -> List[float]:
     cross_entropies = []
@@ -55,7 +59,11 @@ def predict_forced_choice(model: BertForPreTraining,
 
     for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
         with torch.no_grad():
-            batch = tokenizer.batch_encode_plus([' '.join(s) for s in sentences_in_batch],
+            if isinstance(tokenizer, RobertaTokenizerFast):
+                tokenizer_input = [' '.join(s) for s in sentences_in_batch]
+            else:
+                tokenizer_input = sentences_in_batch
+            batch = tokenizer.batch_encode_plus(tokenizer_input,
                                                 padding=True,
                                                 return_attention_mask=True,
                                                 return_tensors='pt')
@@ -81,7 +89,7 @@ def predict_forced_choice(model: BertForPreTraining,
 
 def do_probing(save_path: Path,
                sentences_in_path: Path,
-               tokenizer: RobertaTokenizerFast,
+               tokenizer: Union[RobertaTokenizerFast, BertTokenizerFast],
                model: BertForPreTraining,
                step: int,
                include_punctuation: bool,

@@ -1,4 +1,4 @@
-from transformers import BertTokenizer, BertConfig, BertForPreTraining
+from transformers import BertTokenizerFast, BertConfig, BertForPreTraining
 import torch
 
 from babybert import configs
@@ -20,7 +20,7 @@ if __name__ == '__main__':
         vocab_path = architecture_path / 'vocab.txt'
 
         # make tokenizer for tokenizing test sentences
-        tokenizer = BertTokenizer(vocab_path, do_lower_case=False, do_basic_tokenize=False)
+        tokenizer = BertTokenizerFast(vocab_path, do_lower_case=False, do_basic_tokenize=False)
 
         for path_to_bin in architecture_path.glob('*.bin'):
 
@@ -45,10 +45,7 @@ if __name__ == '__main__':
             # for each probing task
             for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
 
-                # TODO
-                raise NotImplementedError('Only works for TF BERT')
-
-                # do_probing(save_path, sentences_path, tokenizer, model, step, INCLUDE_PUNCTUATION)
+                do_probing(save_path, sentences_path, tokenizer, model, step, INCLUDE_PUNCTUATION)
 
 
 
