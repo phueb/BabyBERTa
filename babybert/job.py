@@ -105,6 +105,7 @@ def main(param2val):
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
     max_step = len(train_data) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
+    exit()
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=params.num_warmup_steps,
                                                 num_training_steps=max_step)

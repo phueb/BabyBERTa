@@ -16,7 +16,8 @@ The goal of this research project is to understand language acquisition from the
 - 2020 (Spring): The BabyBERT project grew out of the BabySRL project led by Cynthia Fisher, Dan Roth, Michael Connor and Yael Gertner, 
 whose published work is available [here](https://www.aclweb.org/anthology/W08-2111/). 
 Having found little benefit for joint SRL and MLM training of a custom (smaller in size) version of BERT,
- a new line of research into BERT's success on syntactic task was begun. 
+ a new line of research into BERT's success on syntactic tasks was begun. 
+This led to the development of a model that is more similar to RoBERTa than BERT.
  
 ## Probing for syntactic knowledge
 
@@ -76,4 +77,4 @@ Then, type the following into the terminal:
 
 ## Compatibility
 
-Tested on Ubuntu 16.04, Python 3.7, transformers=3.02, and torch==1.2.0
+Tested on Ubuntu 18.04, Python 3.7, transformers=3.02, and torch==1.2.0

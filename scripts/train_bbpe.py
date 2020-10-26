@@ -7,7 +7,7 @@ from tokenizers import ByteLevelBPETokenizer
 from babybert import configs
 
 
-VOCAB_SIZE = 4096 * 4  # TODO what's good here?
+VOCAB_SIZE = 4096 * 8  # TODO what's good here?
 MIN_FREQUENCY = 2
 CORPUS_NAMES = ['childes-20191206']
 

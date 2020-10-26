@@ -1,6 +1,7 @@
 
 param2requests = {
-    # 'corpus_name': ['childes-20191206', 'newsela'],
+    'bbpe': ['c-4096', 'c-8192', 'c-16384', 'c-32768'],
+    'corpus_name': ['wiki2-20191206', 'childes-20191206', 'newsela'],
 }
 
 
