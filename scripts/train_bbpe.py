@@ -7,13 +7,13 @@ from tokenizers import ByteLevelBPETokenizer
 from babybert import configs
 
 
-VOCAB_SIZE = 4096 * 8  # TODO what's good here?
-MIN_FREQUENCY = 2
-CORPUS_NAMES = ['childes-20191206']
+VOCAB_SIZE = 4096 * 2  # TODO what's good here?
+MIN_FREQUENCY = 10
+CORPUS_NAMES = ['childes-20201026', 'newsela', 'wiki-20191017-hebb-3M_tokenized']
 
-tokenizer = ByteLevelBPETokenizer(lowercase=False)
+tokenizer = ByteLevelBPETokenizer(lowercase=configs.Data.lowercase_input)
 corpus_file_paths = [str(configs.Dirs.corpora / f'{name}.txt') for name in CORPUS_NAMES]
-special_tokens = configs.Data.universal_symbols + configs.Data.roberta_symbols + configs.Data.childes_symbols
+special_tokens = configs.Data.universal_symbols + configs.Data.roberta_symbols
 tokenizer.train(files=corpus_file_paths,
                 vocab_size=VOCAB_SIZE,
                 min_frequency=MIN_FREQUENCY,

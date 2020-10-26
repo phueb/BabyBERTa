@@ -21,7 +21,6 @@ class Data:
     mask_symbol = '[MASK]'  # this is used in probing sentences regardless of the tokenizer of the model
     universal_symbols = [mask_symbol, long_symbol]
     roberta_symbols = ['<pad>', '<unk>', '<s>', '</s>']
-    childes_symbols = ['[NAME]', '[PLACE]', '[MISC]']
 
 
 class Training:

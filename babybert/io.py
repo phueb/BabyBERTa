@@ -52,7 +52,7 @@ def load_utterances_from_file(file_path: Path,
     print(f'Loading {file_path}')
 
     # when lower-casing, do not lower-case upper-cased symbols
-    upper_cased = set(configs.Data.childes_symbols + configs.Data.universal_symbols)
+    upper_cased = set(configs.Data.universal_symbols)
 
     res = []
     punctuation = {'.', '?', '!'}

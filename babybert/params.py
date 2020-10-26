@@ -1,7 +1,7 @@
 
 param2requests = {
     'bbpe': ['c-4096', 'c-8192', 'c-16384', 'c-32768'],
-    'corpus_name': ['wiki2-20191206', 'childes-20191206', 'newsela'],
+    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
 }
 
 
@@ -17,7 +17,7 @@ param2default = {
     'include_punctuation': True,
     'training_order': 'age-ordered',
     'num_masked': 6,
-    'corpus_name': 'childes-20191206',
+    'corpus_name': 'childes-20201026',
     'bbpe': 'c-16384',
 
     # training

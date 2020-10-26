@@ -20,7 +20,7 @@ if __name__ == '__main__':
         vocab_path = architecture_path / 'vocab.txt'
 
         # make tokenizer for tokenizing test sentences
-        tokenizer = BertTokenizerFast(vocab_path, do_lower_case=False, do_basic_tokenize=False)
+        tokenizer = BertTokenizerFast(vocab_path, do_lower_case=configs.Data.lowercase_input, do_basic_tokenize=False)
 
         for path_to_bin in architecture_path.glob('*.bin'):
 
