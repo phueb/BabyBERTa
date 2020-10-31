@@ -21,7 +21,7 @@ This led to the development of a model that is more similar to RoBERTa than BERT
  
 ## Probing for syntactic knowledge
 
-Probing data can be found [here](https://github.com/phueb/Babeval). 
+Probing data can be found [here](https://github.com/phueb/Zorro). 
 
 
 ## BabyBERT vs. BERT
@@ -70,7 +70,7 @@ You will also need to obtain test sentences,
 ### Pre-training from scratch
 
 To run 10 replications of each configuration on your machine,
- edit the path to `Babeval` probing sentences in `configs.Dirs.probing_sentences`. 
+ edit the path to `Zorro` probing sentences in `configs.Dirs.probing_sentences`. 
 Then, type the following into the terminal:
 
 `ludwig -r10 -i`

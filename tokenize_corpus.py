@@ -1,18 +1,18 @@
 import spacy
+from pathlib import Path
 
 from babybert import configs
 
-CORPUS_NAME = 'wiki-20191017-hebb-raw'
+CORPUS_PATH = Path('/media/research_data/CreateWikiCorpus/runs/param_22/hebb_2019-10-17-23-02-53_num0/more_words_small_bodies.txt')
+OUT_NAME = 'wiki-20191017-hebb'
 NUM_MILLION_SEQUENCES = 3
 
 nlp = spacy.load("en_core_web_sm")
 
-in_path = configs.Dirs.root / 'data' / 'corpora' / f'{CORPUS_NAME}.txt'
-out_path = configs.Dirs.root / 'data' / 'corpora' / in_path.name.replace('raw', f'{NUM_MILLION_SEQUENCES}M_tokenized')
 
 lines = []
 num_periods = 0
-with in_path.open('r') as f:
+with CORPUS_PATH.open('r') as f:
     for n, doc in enumerate(nlp.pipe([l for l in f.readlines()],
                                      disable=['ner', 'tagger', 'parser'])):
         lines.append(' '.join([t.text for t in doc]))
@@ -25,6 +25,7 @@ with in_path.open('r') as f:
         if num_periods > NUM_MILLION_SEQUENCES * 1_000_000:
             break
 
+out_path = configs.Dirs.root / 'data' / 'corpora' / f'{OUT_NAME}-{NUM_MILLION_SEQUENCES}M_tokenized.txt'
 with out_path.open('w') as f:
     for line in lines:
         f.write(line)

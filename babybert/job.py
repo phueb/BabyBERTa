@@ -66,7 +66,7 @@ def main(param2val):
     probing_path = configs.Dirs.probing_sentences
     if not probing_path.exists():
         raise FileNotFoundError(f'Path to probing sentences does not exist: {probing_path}.'
-                                'Probing sentences can be downloaded from github.com/phueb/Babeval/sentences')
+                                'Probing sentences can be downloaded from github.com/phueb/Zorro/sentences')
 
     # save_path - locations where probing results are saved
     save_path = Path(param2val['save_path'])

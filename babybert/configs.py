@@ -6,9 +6,9 @@ class Dirs:
     data = root / 'data'
     corpora = data / 'corpora'
     tokenizers = data / 'tokenizers'
-    probing_sentences = Path('/') / 'media' / 'research_data' / 'Babeval' / 'sentences'
-    probing_results = Path.home() / 'Babeval_phueb' / 'runs'
-    # probing data can be found at https://github.com/phueb/Babeval/tree/master/sentences
+    probing_sentences = Path('/') / 'media' / 'research_data' / 'Zorro' / 'sentences'
+    probing_results = Path.home() / 'Zorro' / 'runs'
+    # probing data can be found at https://github.com/phueb/Zorro/tree/master/sentences
 
 
 class Data:
