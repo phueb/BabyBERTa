@@ -5,3 +5,5 @@ pandas~=0.25.1
 transformers~=3.0.2
 tokenizers~=0.8.1rc1
 PyYAML~=5.3.1
+fairseq~=0.9.0
+spacy~=2.3.0

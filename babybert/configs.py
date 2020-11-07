@@ -17,8 +17,8 @@ class Data:
     max_utterance_length = 30  # must work for all corpora. before sub-tokenization and concatenation of utterances
     max_word_length = 20  # reduces amount of sub-tokens for long words
     train_prob = 0.8  # probability that utterance is assigned to train split
-    long_symbol = '[LONG]'  # this is used in training sentences regardless of the tokenizer of the model
-    mask_symbol = '[MASK]'  # this is used in probing sentences regardless of the tokenizer of the model
+    long_symbol = '<long>'  # this is used in training sentences regardless of the tokenizer of the model
+    mask_symbol = '<mask>'  # this is used in probing sentences regardless of the tokenizer of the model
     universal_symbols = [mask_symbol, long_symbol]
     roberta_symbols = ['<pad>', '<unk>', '<s>', '</s>']
 

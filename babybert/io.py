@@ -8,15 +8,15 @@ from babybert import configs
 
 
 def save_open_ended_predictions(sentences_in: List[List[str]],
-                                predicted_words: List[List[str]],
+                                sentences_out: List[List[str]],
                                 out_path: Path,
                                 verbose: bool = False,
                                 ) -> None:
     print(f'Saving open_ended probing results to {out_path}')
     with out_path.open('w') as f:
-        for s, pw in zip(sentences_in, predicted_words):
-            for w in s:
-                line = f'{w:>20} {w if w != "[MASK]" else pw:>20}'
+        for si, so in zip(sentences_in, sentences_out):
+            for wi, wo in zip(si, so):
+                line = f'{wi:>20} {wi if wi != configs.Data.mask_symbol else wo:>20}'
                 f.write(line + '\n')
                 if verbose:
                     print(line)

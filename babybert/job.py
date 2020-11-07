@@ -76,7 +76,7 @@ def main(param2val):
     # B-BPE tokenizer - defines input vocabulary
     tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'vocab.json'),
                                      merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'merges.txt'))
-    tokenizer.add_special_tokens({'mask_token': AddedToken('[MASK]', lstrip=True)})
+    tokenizer.add_special_tokens({'mask_token': AddedToken(configs.Data.mask_symbol, lstrip=True)})
 
     # load utterances for MLM + do masking
     utterances = load_utterances_from_file(data_path_mlm,
@@ -145,7 +145,7 @@ def main(param2val):
 
                 output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
                 logits_3d = output[0]
-                logits_2d = logits_3d.view(-1, model.config.vocab_size)
+                logits_2d = logits_3d.view(-1, model.config.vocab_size)  # [ num tokens in batch, vocab size]
 
                 # loss
                 masked_word_token_ids = torch.tensor(tokenizer.convert_tokens_to_ids(masked_words),

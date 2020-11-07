@@ -24,7 +24,7 @@ def do_masking(utterances: List[List[str]],
 
     for u in utterances:
         for loc in random.sample(range(len(u)), k=min(num_masked, len(u))):
-            masked_utterance = [w if n != loc else '[MASK]' for n, w in enumerate(u)]
+            masked_utterance = [w if n != loc else configs.Data.mask_symbol for n, w in enumerate(u)]
             masked_word = u[loc]
             yield masked_utterance, masked_word
 

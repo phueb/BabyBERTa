@@ -76,7 +76,7 @@ def predict_forced_choice(model: BertForPreTraining,
             # compute avg cross entropy per sentence
             labels = batch.data['input_ids']
             # logits need to be [batch size, vocab size, seq length]
-            # tags need to be [batch size, vocab size]
+            # tags need to be [batch size, seq length]
             loss = loss_fct(logits_3d.permute(0, 2, 1), labels)
 
             # we need 1 loss value per utterance.
