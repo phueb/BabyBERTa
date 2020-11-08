@@ -156,12 +156,9 @@ def evaluate_pp(model: BertForPreTraining,
     for x, y in gen_batches(bbpe_sequences, tokenizer, batch_size):
 
         with torch.no_grad():
-            # logits
             output = model(**attr.asdict(x))
             logits_3d = output[0]
             logits_2d = logits_3d.view(-1, model.config.vocab_size)
-
-            # loss
             logits_for_masked_words = logits_2d[x.input_ids.view(-1) == tokenizer.mask_token_id]
             loss = loss_fct(logits_for_masked_words,
                             y.view(-1))

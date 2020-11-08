@@ -131,7 +131,6 @@ def main(param2val):
                 output = model(**attr.asdict(x))
                 logits_3d = output[0]
                 logits_2d = logits_3d.view(-1, model.config.vocab_size)  # [ num tokens in batch, vocab size]
-
                 logits_for_masked_words = logits_2d[x.input_ids.view(-1) == tokenizer.mask_token_id]
                 loss = loss_fct(logits_for_masked_words,  # [num masks in batch, vocab size]
                                 y.view(-1))  # [num masks in batch]
