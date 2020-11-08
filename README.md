@@ -46,6 +46,18 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
 To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.
 
+## Pre-processing Pipeline
+
+1. Raw text data, in `txt` files, was previously tokenized using `spacy` which splits on contractions.
+2. Sentences are separated and those that are too short or too long are excluded.
+3. Each sentence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.
+4. One BBPE (sub-)token per sentence is masked.
+5. Multiple sentences may be combined (but default is 1) into a single sequence.
+6. Multiple sequences are batched together (default is 16).
+7. Each batch of sequences is input to BBPE Tokenizer `batch_encode_plus()` method, 
+which produces output compatible with the `forward()` method of BabyBERT (a `transfomers.BertModel`)
+
+
 ## Training observations
 
 Model performance on number-agreement degrades when both punctuation is included and punctuation tokens are never masked, 

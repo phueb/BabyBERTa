@@ -6,22 +6,21 @@ from pathlib import Path
 import torch
 from torch.nn import CrossEntropyLoss
 
-from transformers.modeling_roberta import create_position_ids_from_input_ids
-from transformers.tokenization_roberta import AddedToken
 from transformers import RobertaTokenizerFast
 from transformers import BertForPreTraining, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
+from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 from babybert import configs
-from babybert.io import load_utterances_from_file
-from babybert.utils import evaluate_pp, split, gen_batches_with_labels, do_masking, combine, concatenate_utterances
+from babybert.io import load_sentences_from_file
+from babybert.utils import evaluate_pp, split, gen_batches, make_bbpe_sequences
 from babybert.probing import do_probing
 
 
 @attr.s
 class Params(object):
     # data
-    num_utterances_per_input = attr.ib(validator=attr.validators.instance_of(int))
+    num_sentences_per_input = attr.ib(validator=attr.validators.instance_of(int))
     training_order = attr.ib(validator=attr.validators.instance_of(str))
     include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
     num_masked = attr.ib(validator=attr.validators.instance_of(int))
@@ -75,19 +74,16 @@ def main(param2val):
 
     # B-BPE tokenizer - defines input vocabulary
     tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'vocab.json'),
-                                     merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'merges.txt'))
-    tokenizer.add_special_tokens({'mask_token': AddedToken(configs.Data.mask_symbol, lstrip=True)})
+                                     merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'merges.txt'),
+                                     add_prefix_space=configs.Data.add_prefix_space)
 
-    # load utterances for MLM + do masking
-    utterances = load_utterances_from_file(data_path_mlm,
-                                           training_order=params.training_order,
-                                           include_punctuation=params.include_punctuation,
-                                           allow_discard=True)
-    # each is a tuple with elements: (masked_utterances, masked_word)
-    train_data, devel_data, test_data = split(combine(do_masking(utterances,
-                                                                 params.num_masked,
-                                                                 ),
-                                                      params.num_utterances_per_input))
+    # load text data
+    sentences = load_sentences_from_file(data_path_mlm,
+                                         training_order=params.training_order,
+                                         include_punctuation=params.include_punctuation,
+                                         allow_discard=True)
+    bbpe_sequences = make_bbpe_sequences(sentences, tokenizer, params.num_masked, params.num_sentences_per_input)
+    train_bbpe_sequences, devel_bbpe_sequences, test_bbpe_sequences = split(bbpe_sequences)
 
     # BabyBERT
     print('Preparing BabyBERT...')
@@ -103,7 +99,7 @@ def main(param2val):
 
     # optimizer + lr schedule
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
-    max_step = len(train_data) // params.batch_size * params.num_epochs
+    max_step = len(train_bbpe_sequences) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=params.num_warmup_steps,
@@ -123,37 +119,22 @@ def main(param2val):
     step = 0
     is_evaluated_at_current_step = False
     is_first_time_in_loop = True
-    eval_batch_size = configs.Eval.batch_size // params.num_utterances_per_input  # reduce chance of CUDA memory error
+    eval_batch_size = configs.Eval.batch_size // params.num_sentences_per_input  # reduce chance of CUDA memory error
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):  # TODO test epochs
-        for train_batch in gen_batches_with_labels(train_data, params.batch_size):
-
+        for x, y in gen_batches(train_bbpe_sequences, tokenizer, params.batch_size):
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 model.train()
 
-                # possibly, concatenate multiple utterances into 1 input sequence
-                masked_sequences, masked_words = concatenate_utterances(train_batch)
-
-                # forward MLM
-                batch = tokenizer.batch_encode_plus([' '.join(s) for s in masked_sequences],
-                                                    padding=True,
-                                                    return_tensors='pt')
-                position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
-
-                output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
+                output = model(**attr.asdict(x))
                 logits_3d = output[0]
                 logits_2d = logits_3d.view(-1, model.config.vocab_size)  # [ num tokens in batch, vocab size]
 
-                # loss
-                masked_word_token_ids = torch.tensor(tokenizer.convert_tokens_to_ids(masked_words),
-                                                     device='cuda',
-                                                     dtype=torch.long,
-                                                     requires_grad=False)
-                logits_for_masked_words = logits_2d[batch.data['input_ids'].view(-1) == tokenizer.mask_token_id]
+                logits_for_masked_words = logits_2d[x.input_ids.view(-1) == tokenizer.mask_token_id]
                 loss = loss_fct(logits_for_masked_words,  # [num masks in batch, vocab size]
-                                masked_word_token_ids.view(-1))  # [num masks in batch]
+                                y.view(-1))  # [num masks in batch]
 
                 # backward + update
                 loss.backward()
@@ -176,9 +157,9 @@ def main(param2val):
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
                     print('Computing train pp...', flush=True)
-                    train_pp = evaluate_pp(model, tokenizer, train_data, eval_batch_size)
+                    train_pp = np.nan  # evaluate_pp(model, tokenizer, train_data, eval_batch_size) todo
                     print('Computing devel pp...', flush=True)
-                    devel_pp = evaluate_pp(model, tokenizer, devel_data, eval_batch_size)
+                    devel_pp = evaluate_pp(model, tokenizer, devel_bbpe_sequences, eval_batch_size)
                     name2xy['train_pps'].append((step, train_pp))
                     name2xy['devel_pps'].append((step, devel_pp))
                     print(f'train-pp={train_pp}', flush=True)

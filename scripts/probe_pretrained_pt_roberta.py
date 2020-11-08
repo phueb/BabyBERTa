@@ -5,7 +5,7 @@ from fairseq.models.roberta import RobertaModel
 
 from babybert import configs
 from babybert.io import save_yaml_file
-from babybert.io import load_utterances_from_file, save_forced_choice_predictions, save_open_ended_predictions
+from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
 CHECKPOINT_OR_PRETRAINED_NAME = 'checkpoint_last'  # 'roberta.base'
@@ -47,7 +47,7 @@ if __name__ == '__main__':
 
             # load probing sentences
             print(f'Starting probing with task={task_name}', flush=True)
-            sentences_in = load_utterances_from_file(sentences_path)
+            sentences_in = load_sentences_from_file(sentences_path)
 
             # prepare out path
             probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'

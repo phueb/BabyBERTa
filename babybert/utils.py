@@ -1,7 +1,9 @@
 import random
 import torch
 from torch.nn import CrossEntropyLoss
-from typing import Tuple, List, Iterator, Generator
+from typing import Tuple, List, Optional, Generator, Union
+import attr
+from itertools import islice
 
 from transformers import RobertaTokenizerFast
 from transformers.modeling_roberta import create_position_ids_from_input_ids
@@ -10,57 +12,77 @@ from transformers import BertForPreTraining
 from babybert import configs
 
 
-def do_masking(utterances: List[List[str]],
-               num_masked: int,
-               ) -> Generator[Tuple[List[str], str], None, None]:
+@attr.s(slots=True, frozen=True)
+class BBPESequence:
+    sequence: List[str] = attr.ib()  # possibly multiple sentences in 1 sequence
+    labels: Optional[Tuple[str]] = attr.ib(default=None)  # masked words - always exactly one per sentence
+
+
+@attr.s(slots=True, frozen=True)
+class RobertaInput:
+    input_ids = attr.ib()
+    attention_mask = attr.ib()
+    position_ids = attr.ib()
+
+
+def make_bbpe_sequences(sentences: List[str],
+                        tokenizer: RobertaTokenizerFast,
+                        num_masked: int,
+                        num_sentences_per_input: int,
+                        ) -> List[BBPESequence]:
+
+    print('Making BBPE sequences...')
+
+    # tokenize with BBPE
+    bbpe_sentences = [tokenizer.tokenize(s) for s in sentences]
+
+    #  optional masking
+    if num_masked == 0:  # probing
+        print('Not adding masks')
+        gen = ((bs, None) for bs in bbpe_sentences)
+    else:
+        gen = gen_masking(bbpe_sentences, num_masked)
+
+    # combine multiple sentences into 1 sequence
+    res = []
+    while True:
+        tmp = list(zip(*islice(gen, 0, num_sentences_per_input)))
+        if not tmp:
+            break
+        if not len(tmp) == 2: print(tmp)
+        masked_sentences, labels = tmp
+        sequence = [w for s in masked_sentences for w in s]
+        bbpe_sequence = BBPESequence(sequence=sequence, labels=labels)
+        res.append(bbpe_sequence)
+
+        if len(res) % 100_000 == 0:
+            print(f'Prepared {len(res):>12,} sequences', flush=True)
+
+    print(f'Num total BBPE sequences={len(res):,}', flush=True)
+    return res
+
+
+def gen_masking(bbpe_sentences: List[List[str]],
+                num_masked: int,
+                ) -> Generator[Tuple[List[str], str], None, None]:
     """
-    Prepare input for masked language modeling:
+    Duplicate sentences, each time adding 1 mask in different position.
     contrary to original BERT,
-    only 1 location is masked per utterance, and masked locations are replaced by:
+    only 1 location is masked per sentence, and masked locations are replaced by:
     100% MASK, 0% random, 0% original.
     """
 
-    print(f'Inserting masked symbols into utterances...')
-
-    for u in utterances:
-        for loc in random.sample(range(len(u)), k=min(num_masked, len(u))):
-            masked_utterance = [w if n != loc else configs.Data.mask_symbol for n, w in enumerate(u)]
-            masked_word = u[loc]
-            yield masked_utterance, masked_word
+    for bs in bbpe_sentences:
+        for loc in random.sample(range(len(bs)), k=min(num_masked, len(bs))):
+            masked_sentence = [w if n != loc else configs.Data.mask_symbol for n, w in enumerate(bs)]
+            masked_word = bs[loc]
+            yield masked_sentence, masked_word
 
 
-def combine(data: Generator[Tuple[List[str], str], None, None],
-            num_utterances_per_input: int,
-            ) -> Generator[List[Tuple[List[str], str]], None, None]:
-    """
-    combines multiple (utterance, label) pairs into a list of multiple such pairs.
-    this controls how many utterances make up a single input sequence.
-    in the original BERT implementation, each input sequence contains multiple sentences.
-    """
-
-    print(f'Number of utterances per input sequence={num_utterances_per_input}')
-
-    safe_guard = 0
-    while True:
-
-        safe_guard += 1
-        if safe_guard > 10_000_000:
-            raise SystemExit('SAFE GUARD')
-
-        # get a slice of the data
-        try:
-            combined = [next(data) for _ in range(num_utterances_per_input)]
-        except StopIteration:
-            print(f'Num total input sequences={safe_guard:,}')
-            return
-
-        yield combined
-
-
-def split(data: Generator[List[Tuple[List[str], str]], None, None],
-          seed: int = 2) -> Tuple[List[List[Tuple[List[str], str]]],
-                                  List[List[Tuple[List[str], str]]],
-                                  List[List[Tuple[List[str], str]]]]:
+def split(data: List[BBPESequence],
+          seed: int = 2) -> Tuple[List[BBPESequence],
+                                  List[BBPESequence],
+                                  List[BBPESequence]]:
 
     print(f'Splitting data into train/devel/test sets...')
 
@@ -81,16 +103,48 @@ def split(data: Generator[List[Tuple[List[str], str]], None, None],
             else:
                 test.append(i)
 
-    print(f'num train sequences={len(train):,}')
-    print(f'num devel sequences={len(devel):,}')
-    print(f'num test  sequences={len(test):,}')
+    print(f'num train sequences={len(train):,}', flush=True)
+    print(f'num devel sequences={len(devel):,}', flush=True)
+    print(f'num test  sequences={len(test):,}' , flush=True)
 
     return train, devel, test
 
 
+def gen_batches(bbpe_sequences: List[BBPESequence],
+                tokenizer: RobertaTokenizerFast,
+                batch_size: int,
+                no_labels: bool = False,
+                ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
+
+    for start in range(0, len(bbpe_sequences), batch_size):
+        end = min(len(bbpe_sequences), start + batch_size)
+
+        tokenized_sequences = []
+        masked_words = []
+        for bbpe_sequence in bbpe_sequences[start:end]:
+            tokenized_sequences.append(bbpe_sequence.sequence)
+            masked_words.extend(bbpe_sequence.labels)
+
+        encoding = tokenizer.batch_encode_plus(tokenized_sequences,
+                                               is_pretokenized=True,
+                                               padding=True,
+                                               return_tensors='pt').to('cuda')
+        encoding['position_ids'] = create_position_ids_from_input_ids(encoding.data['input_ids'],
+                                                                      tokenizer.pad_token_id)
+        x = RobertaInput(**encoding)
+        if no_labels:  # when probing
+            y = None
+        else:
+            y = torch.tensor(tokenizer.convert_tokens_to_ids(masked_words),
+                             device='cuda',
+                             dtype=torch.long,
+                             requires_grad=False)
+        yield x, y
+
+
 def evaluate_pp(model: BertForPreTraining,
                 tokenizer: RobertaTokenizerFast,
-                data: List[List[Tuple[List[str], str]]],
+                bbpe_sequences: List[BBPESequence],
                 batch_size: int,
                 ) -> float:
     model.eval()
@@ -99,74 +153,21 @@ def evaluate_pp(model: BertForPreTraining,
 
     pp_sum = torch.zeros(size=(1,)).cuda()
     num_steps = 0
-    for batch in gen_batches_with_labels(data, batch_size):
-        masked_utterances, masked_words = concatenate_utterances(batch)
+    for x, y in gen_batches(bbpe_sequences, tokenizer, batch_size):
 
         with torch.no_grad():
-            batch = tokenizer.batch_encode_plus([' '.join(s) for s in masked_utterances],
-                                                padding=True,
-                                                return_tensors='pt')
-            position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
-
             # logits
-            output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
+            output = model(**attr.asdict(x))
             logits_3d = output[0]
             logits_2d = logits_3d.view(-1, model.config.vocab_size)
 
             # loss
-            masked_word_token_ids = torch.tensor(tokenizer.convert_tokens_to_ids(masked_words),
-                                                 device='cuda',
-                                                 dtype=torch.long,
-                                                 requires_grad=False)
-            logits_for_masked_words = logits_2d[batch.data['input_ids'].view(-1) == tokenizer.mask_token_id]
-            loss = loss_fct(logits_for_masked_words,  # [batch size, vocab size]
-                            masked_word_token_ids.view(-1))  # [batch size]
+            logits_for_masked_words = logits_2d[x.input_ids.view(-1) == tokenizer.mask_token_id]
+            loss = loss_fct(logits_for_masked_words,
+                            y.view(-1))
 
         pp = torch.exp(loss)
         pp_sum += pp
         num_steps += 1
 
     return pp_sum.cpu().numpy().item() / num_steps
-
-
-def gen_batches_without_labels(utterances: List[List[str]],
-                               batch_size: int) -> Generator[List[List[str]], None, None]:
-    """used during probing, where labels are not needed"""
-    for start in range(0, len(utterances), batch_size):
-        end = min(len(utterances), start + batch_size)
-        yield utterances[start:end]
-
-
-def gen_batches_with_labels(data: List[List[Tuple[List[str], str]]],
-                            batch_size: int) -> Generator[List[List[Tuple[List[str], str]]], None, None]:
-    """used for training, where labels are required"""
-    for start in range(0, len(data), batch_size):
-        end = min(len(data), start + batch_size)
-        yield data[start:end]
-
-
-def concatenate_utterances(train_batch: List[List[Tuple[List[str], str]]],
-                           ) -> Tuple[List[List[str]], List[str]]:
-    """
-    re-arrange data structure of batch for BERT tokenizer, which expects data of type List[List[str]]
-
-    Each item in the incoming data structure (a list) is a list of (masked utterance, masked word) pairs.
-    This data structure needs to be converted into 2 outgoing data structures:
-    1. A batch (list) where each item is a sequence composed of 1, or multiple concatenated, utterances
-    2. A batch (list) of masked words
-
-    convert from
-    [(masked utterance1, masked word1),(masked utterance2, masked word2), ..], ..]
-    to
-    [concatenated utterances1, concatenated utterances2, ..] and [masked word1, masked word2, ...]
-    """
-    masked_sequences, masked_words = [], []
-
-    for combination in train_batch:
-        us, ws = zip(*combination)
-        masked_sequences.append([])
-        for u, w in zip(us, ws):
-            masked_sequences[-1].extend(u)
-            masked_words.append(w)
-
-    return masked_sequences, masked_words

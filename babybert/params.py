@@ -1,24 +1,25 @@
 
 param2requests = {
-    'bbpe': ['c-n-w-8000'],
-    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
+    'bbpe': ['c-n-w-8192'],
+    'corpus_name': ['wiki-20191017-hebb-3M_tokenized'],  #, 'childes-20201026', 'newsela'],
+    'num_sentences_per_input': [1],
 }
 
 
 param2debug = {
     'num_masked': 1,
     'num_layers': 2,
-    'num_utterances_per_input': 1,
+    'num_sentences_per_input': 1,
 }
 
 param2default = {
     # data
-    'num_utterances_per_input': 1,  # if too large -> may exceed CUDA memory, must be 1 to get good number-agreement
+    'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, must be 1 to get good number-agreement
     'include_punctuation': True,
     'training_order': 'age-ordered',
     'num_masked': 6,
     'corpus_name': 'childes-20201026',
-    'bbpe': 'c-n-w-8000',
+    'bbpe': 'c-n-w-8192',
 
     # training
     'batch_size': 16,

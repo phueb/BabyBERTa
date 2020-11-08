@@ -1,99 +1,78 @@
 from pathlib import Path
 from typing import Union, Tuple, List
 import numpy as np
+import attr
 
 from transformers import RobertaTokenizerFast
-from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 import torch
 from torch.nn import CrossEntropyLoss
-from transformers import BertForPreTraining, BertTokenizerFast
+from transformers import BertForPreTraining
 
 from babybert import configs
 from babybert.io import save_yaml_file
-from babybert.utils import gen_batches_without_labels
-from babybert.io import load_utterances_from_file, save_forced_choice_predictions, save_open_ended_predictions
+from babybert.utils import gen_batches, BBPESequence, make_bbpe_sequences
+from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
 def predict_open_ended(model: BertForPreTraining,
-                       tokenizer: Union[RobertaTokenizerFast, BertTokenizerFast],
-                       sentences: List[List[str]],
-                       ) -> List[List[str]]:
+                       tokenizer: RobertaTokenizerFast,
+                       bbpe_sequences: List[BBPESequence],
+                       ) -> List[str]:
 
-    sentences_out = []
+    res = []
 
-    for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
+    for x, _ in gen_batches(bbpe_sequences, tokenizer, configs.Eval.batch_size, no_labels=True):
 
         with torch.no_grad():
-            if isinstance(tokenizer, RobertaTokenizerFast):
-                tokenizer_input = [' '.join(s) for s in sentences_in_batch]
-            else:
-                tokenizer_input = sentences_in_batch
-            batch = tokenizer.batch_encode_plus(tokenizer_input,
-                                                padding=True,
-                                                return_tensors='pt')
-            position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
 
             # get logits for all words in batch
-            output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
+            output = model(**attr.asdict(x))
             logits_3d = output[0].detach()
 
             # get predicted words for masked locations
-            mask_locations = batch.data['input_ids'] == tokenizer.mask_token_id
-            logits_for_masked_words = logits_3d[mask_locations]  # 2D index into 3D array -> 2D array [batch, vocab]
+            mask_locations = x.input_ids == tokenizer.mask_token_id
+            logits_for_masked_words = logits_3d[mask_locations]  # 2D index into 3D array -> 2D array [num masks, vocab]
             token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
             assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))  # number of mask symbols should be number of sentences
 
-            # sentences_out
-            for pw, si in zip(predicted_words, sentences_in_batch):
-                sentence_out = si.copy()
-                sentence_out[si.index(configs.Data.mask_symbol)] = pw
-                sentences_out.append(sentence_out)
+            res.extend(predicted_words)
 
-    return sentences_out
+    return res
 
 
 def predict_forced_choice(model: BertForPreTraining,
-                          tokenizer: Union[RobertaTokenizerFast, BertTokenizerFast],
-                          sentences: List[List[str]],
+                          tokenizer: RobertaTokenizerFast,
+                          bbpe_sequences: List[BBPESequence],
                           ) -> List[float]:
     cross_entropies = []
     loss_fct = CrossEntropyLoss(reduction='none')
 
-    for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
-        with torch.no_grad():
-            if isinstance(tokenizer, RobertaTokenizerFast):
-                tokenizer_input = [' '.join(s) for s in sentences_in_batch]
-            else:
-                tokenizer_input = sentences_in_batch
-            batch = tokenizer.batch_encode_plus(tokenizer_input,
-                                                padding=True,
-                                                return_attention_mask=True,
-                                                return_tensors='pt')
-            position_ids = create_position_ids_from_input_ids(batch.data['input_ids'], tokenizer.pad_token_id)
+    for x, _ in gen_batches(bbpe_sequences, tokenizer, configs.Eval.batch_size, no_labels=True):
 
+        with torch.no_grad():
             # logits
-            output = model(**batch.to('cuda'), position_ids=position_ids.to('cuda'))
+            output = model(**attr.asdict(x))
             logits_3d = output[0]
 
             # compute avg cross entropy per sentence
-            labels = batch.data['input_ids']
+            labels = x.input_ids
             # logits need to be [batch size, vocab size, seq length]
             # tags need to be [batch size, seq length]
             loss = loss_fct(logits_3d.permute(0, 2, 1), labels)
 
-            # we need 1 loss value per utterance.
+            # we need 1 loss value per sentence.
             # to do so, we must exclude loss for padding symbols, using attention_mask
             cross_entropies += [row[np.where(row_mask)[0]].mean().item()
-                                for row, row_mask in zip(loss, batch.data['attention_mask'].cpu().numpy())]
+                                for row, row_mask in zip(loss, x.attention_mask.cpu().numpy())]
 
     return cross_entropies
 
 
 def do_probing(save_path: Path,
                sentences_in_path: Path,
-               tokenizer: Union[RobertaTokenizerFast, BertTokenizerFast],
+               tokenizer: RobertaTokenizerFast,
                model: BertForPreTraining,
                step: int,
                include_punctuation: bool,
@@ -106,7 +85,9 @@ def do_probing(save_path: Path,
 
     # load probing sentences
     print(f'Starting probing with task={task_name}', flush=True)
-    sentences_in = load_utterances_from_file(sentences_in_path, include_punctuation=include_punctuation)
+    sentences = load_sentences_from_file(sentences_in_path, include_punctuation=include_punctuation)
+    bbpe_sequences = make_bbpe_sequences(sentences, tokenizer, num_masked=0, num_sentences_per_input=1)
+    assert len(bbpe_sequences) == len(sentences)
 
     # prepare out path
     probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
@@ -122,13 +103,13 @@ def do_probing(save_path: Path,
 
     # do inference on forced-choice task
     if task_type == 'forced_choice':
-        cross_entropies = predict_forced_choice(model, tokenizer, sentences_in)
-        save_forced_choice_predictions(sentences_in, cross_entropies, probing_results_path)
+        cross_entropies = predict_forced_choice(model, tokenizer, bbpe_sequences)
+        save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
     # do inference on open_ended task
     elif task_type == 'open_ended':
-        sentences_out = predict_open_ended(model, tokenizer, sentences_in)
-        save_open_ended_predictions(sentences_in, sentences_out, probing_results_path,
+        predicted_words = predict_open_ended(model, tokenizer, bbpe_sequences)
+        save_open_ended_predictions(sentences, predicted_words, probing_results_path,
                                     verbose=True if 'dummy' in task_name else False)
     else:
         raise AttributeError('Invalid arg to "task_type".')
