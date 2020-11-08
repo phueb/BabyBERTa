@@ -1,6 +1,6 @@
 
 param2requests = {
-    'bbpe': ['c-4096', 'c-8192', 'c-16384', 'c-32768'],
+    'bbpe': ['c-n-w-8000'],
     'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
 }
 
@@ -18,7 +18,7 @@ param2default = {
     'training_order': 'age-ordered',
     'num_masked': 6,
     'corpus_name': 'childes-20201026',
-    'bbpe': 'c-16384',
+    'bbpe': 'c-n-w-8000',
 
     # training
     'batch_size': 16,

@@ -20,7 +20,7 @@ def predict_open_ended(model: BertForPreTraining,
                        sentences: List[List[str]],
                        ) -> List[List[str]]:
 
-    res = []
+    sentences_out = []
 
     for sentences_in_batch in gen_batches_without_labels(sentences, configs.Eval.batch_size):
 
@@ -45,9 +45,13 @@ def predict_open_ended(model: BertForPreTraining,
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
             assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))  # number of mask symbols should be number of sentences
 
-            res += predicted_words
+            # sentences_out
+            for pw, si in zip(predicted_words, sentences_in_batch):
+                sentence_out = si.copy()
+                sentence_out[si.index(configs.Data.mask_symbol)] = pw
+                sentences_out.append(sentence_out)
 
-    return res
+    return sentences_out
 
 
 def predict_forced_choice(model: BertForPreTraining,
