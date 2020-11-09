@@ -105,10 +105,7 @@ def main(param2val):
                                                 num_training_steps=max_step)
 
     # init performance collection
-    name2xy = {
-        'train_pps': [],
-        'devel_pps': [],
-    }
+    name2xy = {}
 
     # init
     loss_fct = CrossEntropyLoss()
@@ -121,7 +118,7 @@ def main(param2val):
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):  # TODO test epochs
-        for x, y in gen_batches(train_sequences, tokenizer, params.batch_size):
+        for x, y in gen_batches(train_sequences, tokenizer, params.batch_size, params.num_masked):
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 # forward
@@ -146,24 +143,21 @@ def main(param2val):
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
                     model.eval()
-                    for sequences, name in zip([train_sequences, devel_sequences],
-                                                    ['train', 'devel']):
+                    for sequences, name in zip([devel_sequences],
+                                                    ['devel']):
 
-                        if name in ['train', 'devel']:
-                            continue
-                        else:
-                            print(f'Computing {name} pp...', flush=True)
+                        print(f'Computing {name} pp...', flush=True)
 
                         pp_sum = 0
                         num_steps = 0
-                        for x, y in gen_batches(sequences, tokenizer, eval_batch_size):
+                        for x, y in gen_batches(sequences, tokenizer, eval_batch_size, params.num_masked):
                             loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
                             pp = torch.exp(loss).detach().cpu().numpy().item()
                             pp_sum += pp
                             num_steps += 1
                             model.zero_grad()
                         pp = pp_sum / num_steps
-                        name2xy['train_pps'].append((step, pp))
+                        name2xy.setdefault(f'{name}_pps', []).append((step, pp))
                         print(f'{name} pp={pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks

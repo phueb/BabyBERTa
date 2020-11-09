@@ -50,9 +50,9 @@ To achieve above-chance performance on number agreement, the model must not be t
 
 1. Raw text data, in `txt` files, was previously tokenized using `spacy` which splits on contractions.
 2. Sentences are separated and those that are too short or too long are excluded.
-3. Each sentence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.
-4. One BBPE (sub-)token per sentence is masked.
-5. Multiple sentences may be combined (but default is 1) into a single sequence.
+3. Multiple sentences may be combined (but default is 1) into a single sequence.
+4. Each sequence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.
+5. One BBPE (sub-)token per sequence is masked.
 6. Multiple sequences are batched together (default is 16).
 7. Each batch of sequences is input to BBPE Tokenizer `batch_encode_plus()` method, 
 which produces output compatible with the `forward()` method of BabyBERT (a `transfomers.BertModel`)

@@ -24,7 +24,7 @@ def predict_open_ended(model: BertForPreTraining,
 
     with torch.no_grad():
 
-        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size, insert_masks=False):
+        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size, num_masked=0):
 
             # get logits for all words in batch
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
@@ -52,7 +52,7 @@ def predict_forced_choice(model: BertForPreTraining,
 
     with torch.no_grad():
 
-        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size, insert_masks=False):
+        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size, num_masked=0):
 
             # get loss
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})

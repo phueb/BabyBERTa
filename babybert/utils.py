@@ -4,7 +4,7 @@ from typing import Tuple, List, Optional, Generator, Union
 import attr
 from itertools import islice
 
-from transformers import RobertaTokenizerFast
+from transformers import RobertaTokenizerFast, BatchEncoding
 from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 from babybert import configs
@@ -39,7 +39,6 @@ def make_sequences(sentences: List[str],
     return res
 
 
-
 def split(data: List[str],
           seed: int = 2) -> Tuple[List[str],
                                   List[str],
@@ -70,46 +69,88 @@ def split(data: List[str],
     return train, devel, test
 
 
+def get_masked_indices(batch_encoding: BatchEncoding,
+                       duplications: List[int]
+                       ) -> Tuple[List[int], List[int]]:
+    """
+    guarantee that each duplicated sequence has mask in different location.
+    inserts only 1 mask per sequence.
+    does not mask padding symbols.
+    """
+    row_indices = []
+    col_indices = []
+    encoding_id = 0
+    row_id = 0
+    for d in duplications:
+        max_mask_location = sum(batch_encoding.encodings[encoding_id].attention_mask)
+        for col_id in random.sample(range(max_mask_location), k=min(d, max_mask_location)):
+            assert col_id <= configs.Data.max_sequence_length
+            row_indices.append(row_id)
+            col_indices.append(col_id)
+            row_id += 1
+
+        encoding_id += d  # d is used to get index for retrieving unique sequences in batch
+
+    return row_indices, col_indices
+
+
 def gen_batches(sequences: List[str],
                 tokenizer: RobertaTokenizerFast,
                 batch_size: int,
-                insert_masks: bool = True,
+                num_masked: int,
                 ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
 
-    for start in range(0, len(sequences), batch_size):
-        end = min(len(sequences), start + batch_size)
+    if num_masked:
+        assert batch_size % num_masked == 0
+        num_unique_sequences_in_batch = batch_size // num_masked
+    else:
+        num_unique_sequences_in_batch = batch_size
 
-        encoding = tokenizer.batch_encode_plus(sequences[start:end],
-                                               is_pretokenized=False,
-                                               max_length=configs.Data.max_sequence_length,
-                                               padding=True,
-                                               truncation=True,
-                                               return_tensors='pt')
+    for start in range(0, len(sequences), num_unique_sequences_in_batch):
+
+        # get unique sequences
+        end = min(len(sequences), start + num_unique_sequences_in_batch)
+        unique_sequences = sequences[start:end]
+
+        # duplicate unique sequences in batch - each will get different mask
+        sequences_in_batch = []
+        duplications = []
+        for s in unique_sequences:
+            num_whole_words = len(s.split())
+            num_duplicated = min(max(num_masked, 1), num_whole_words)
+            duplications.append(num_duplicated)
+            for _ in range(num_duplicated):
+                sequences_in_batch.append(s)
+
+        batch_encoding = tokenizer.batch_encode_plus(sequences_in_batch,
+                                                     is_pretokenized=False,
+                                                     max_length=configs.Data.max_sequence_length,
+                                                     padding=True,
+                                                     truncation=True,
+                                                     return_tensors='pt')
 
         # mask - only once per sequence
-        mask_pattern = torch.zeros_like(encoding.data['input_ids'], dtype=torch.bool)
-        if insert_masks:
-            mask_pattern[:, 2] = 1  # todo test deterministic masking
+        mask_pattern = torch.zeros_like(batch_encoding.data['input_ids'], dtype=torch.bool)
+        if num_masked:
+            row_indices, col_indices = get_masked_indices(batch_encoding, duplications)
+            mask_pattern[row_indices, col_indices] = 1
             assert torch.sum(mask_pattern) == len(mask_pattern)
         input_ids_with_mask = torch.where(mask_pattern,
                                           torch.tensor(tokenizer.mask_token_id),
-                                          encoding.data['input_ids'])
+                                          batch_encoding.data['input_ids'])
 
         # encode sequences -> x
         x = RobertaInput(input_ids=input_ids_with_mask,
-                         attention_mask=encoding.data['attention_mask'],
-                         position_ids=create_position_ids_from_input_ids(encoding.data['input_ids'],
+                         attention_mask=batch_encoding.data['attention_mask'],
+                         position_ids=create_position_ids_from_input_ids(batch_encoding.data['input_ids'],
                                                                          tokenizer.pad_token_id),
                          )
 
         # encode labels -> y
-        if not insert_masks:  # when probing
+        if not num_masked:  # when probing
             y = None
         else:
-            y = torch.tensor(encoding.data['input_ids'][mask_pattern],
-                             device='cuda',
-                             dtype=torch.long,
-                             requires_grad=False)
+            y = batch_encoding.data['input_ids'].clone().detach().requires_grad_(False)[mask_pattern]
 
         yield x, y
 
