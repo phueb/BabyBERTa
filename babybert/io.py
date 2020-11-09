@@ -32,7 +32,7 @@ def save_forced_choice_predictions(raw_sentences: List[str],
     print(f'Saving forced_choice probing results to {out_path}')
     with out_path.open('w') as f:
         for s, xe in zip(raw_sentences, cross_entropies):
-            line = f'{" ".join(s)} {xe:.4f}'
+            line = f'{s} {xe:.4f}'
             f.write(line + '\n')
             if verbose:
                 print(line)
