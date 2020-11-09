@@ -75,15 +75,15 @@ def get_masked_indices(batch_encoding: BatchEncoding,
     """
     guarantee that each duplicated sequence has mask in different location.
     inserts only 1 mask per sequence.
-    does not mask padding symbols.
+    does not mask padding, bos, or eos symbols.
     """
     row_indices = []
     col_indices = []
     encoding_id = 0
     row_id = 0
     for d in duplications:
-        max_mask_location = sum(batch_encoding.encodings[encoding_id].attention_mask)
-        for col_id in random.sample(range(max_mask_location), k=min(d, max_mask_location)):
+        max_mask_location = sum(batch_encoding.encodings[encoding_id].attention_mask)  # does not consider eos, bos
+        for col_id in random.sample(range(1, max_mask_location - 1), k=min(d, max_mask_location)):
             assert col_id <= configs.Data.max_sequence_length
             row_indices.append(row_id)
             col_indices.append(col_id)

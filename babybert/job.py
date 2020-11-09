@@ -98,7 +98,7 @@ def main(param2val):
 
     # optimizer + lr schedule
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
-    max_step = len(train_sequences) // params.batch_size * params.num_epochs
+    max_step = len(train_sequences) * params.num_masked // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=params.num_warmup_steps,
@@ -143,22 +143,22 @@ def main(param2val):
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
                     model.eval()
-                    for sequences, name in zip([devel_sequences],
-                                                    ['devel']):
-
-                        print(f'Computing {name} pp...', flush=True)
-
-                        pp_sum = 0
-                        num_steps = 0
-                        for x, y in gen_batches(sequences, tokenizer, eval_batch_size, params.num_masked):
-                            loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
-                            pp = torch.exp(loss).detach().cpu().numpy().item()
-                            pp_sum += pp
-                            num_steps += 1
-                            model.zero_grad()
-                        pp = pp_sum / num_steps
-                        name2xy.setdefault(f'{name}_pps', []).append((step, pp))
-                        print(f'{name} pp={pp}', flush=True)
+                    # for sequences, name in zip([devel_sequences],
+                    #                                 ['devel']):
+                    #
+                    #     print(f'Computing {name} pp...', flush=True)
+                    #
+                    #     pp_sum = 0
+                    #     num_steps = 0
+                    #     for x, y in gen_batches(sequences, tokenizer, eval_batch_size, params.num_masked):
+                    #         loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
+                    #         pp = torch.exp(loss).detach().cpu().numpy().item()
+                    #         pp_sum += pp
+                    #         num_steps += 1
+                    #         model.zero_grad()
+                    #     pp = pp_sum / num_steps
+                    #     name2xy.setdefault(f'{name}_pps', []).append((step, pp))
+                    #     print(f'{name} pp={pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob('*.txt'):
