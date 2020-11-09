@@ -23,13 +23,15 @@ class Data:
     roberta_symbols = [mask_symbol, '<pad>', '<unk>', '<s>', '</s>']
     add_prefix_space = True
 
+    max_sequence_length = 256  # todo test  - this may truncate BEFORE masked word -> throws error
+
 
 class Training:
     feedback_interval = 1000
 
 
 class Eval:
-    interval = 20_000
+    interval = 1_000
     eval_pp_at_step_zero = False
-    batch_size = 64  # 128 is too large when vocab size ~ 8k
+    batch_size = 16  # 128 is too large when vocab size ~ 8k
 

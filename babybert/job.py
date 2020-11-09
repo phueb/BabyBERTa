@@ -9,11 +9,10 @@ from torch.nn import CrossEntropyLoss
 from transformers import RobertaTokenizerFast
 from transformers import BertForPreTraining, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
-from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 from babybert import configs
 from babybert.io import load_sentences_from_file
-from babybert.utils import evaluate_pp, split, gen_batches, make_bbpe_sequences
+from babybert.utils import split, gen_batches, make_sequences, forward_mlm
 from babybert.probing import do_probing
 
 
@@ -82,8 +81,8 @@ def main(param2val):
                                          training_order=params.training_order,
                                          include_punctuation=params.include_punctuation,
                                          allow_discard=True)
-    bbpe_sequences = make_bbpe_sequences(sentences, tokenizer, params.num_masked, params.num_sentences_per_input)
-    train_bbpe_sequences, devel_bbpe_sequences, test_bbpe_sequences = split(bbpe_sequences)
+    sequences = make_sequences(sentences, params.num_sentences_per_input)
+    train_sequences, devel_sequences, test_sequences = split(sequences)
 
     # BabyBERT
     print('Preparing BabyBERT...')
@@ -99,7 +98,7 @@ def main(param2val):
 
     # optimizer + lr schedule
     optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
-    max_step = len(train_bbpe_sequences) // params.batch_size * params.num_epochs
+    max_step = len(train_sequences) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}')
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=params.num_warmup_steps,
@@ -113,7 +112,6 @@ def main(param2val):
 
     # init
     loss_fct = CrossEntropyLoss()
-    evaluated_steps = []
     train_start = time.time()
     loss = None
     step = 0
@@ -123,18 +121,12 @@ def main(param2val):
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):  # TODO test epochs
-        for x, y in gen_batches(train_bbpe_sequences, tokenizer, params.batch_size):
+        for x, y in gen_batches(train_sequences, tokenizer, params.batch_size):
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
+                # forward
                 model.train()
-
-                output = model(**attr.asdict(x))
-                logits_3d = output[0]
-                logits_2d = logits_3d.view(-1, model.config.vocab_size)  # [ num tokens in batch, vocab size]
-                logits_for_masked_words = logits_2d[x.input_ids.view(-1) == tokenizer.mask_token_id]
-                loss = loss_fct(logits_for_masked_words,  # [num masks in batch, vocab size]
-                                y.view(-1))  # [num masks in batch]
-
+                loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
                 # backward + update
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # otherwise only punctuation is predicted
@@ -147,28 +139,38 @@ def main(param2val):
             is_first_time_in_loop = False
 
             # eval
-            if step % configs.Eval.interval == 0 and step not in evaluated_steps:
-                evaluated_steps.append(step)
+            if step % configs.Eval.interval == 0:
                 is_evaluated_at_current_step = True
-                model.eval()
 
                 # pp
                 skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
                 if not skip_pp:
-                    print('Computing train pp...', flush=True)
-                    train_pp = np.nan  # evaluate_pp(model, tokenizer, train_data, eval_batch_size) todo
-                    print('Computing devel pp...', flush=True)
-                    devel_pp = evaluate_pp(model, tokenizer, devel_bbpe_sequences, eval_batch_size)
-                    name2xy['train_pps'].append((step, train_pp))
-                    name2xy['devel_pps'].append((step, devel_pp))
-                    print(f'train-pp={train_pp}', flush=True)
-                    print(f'devel-pp={devel_pp}', flush=True)
+                    model.eval()
+                    for sequences, name in zip([train_sequences, devel_sequences],
+                                                    ['train', 'devel']):
+
+                        if name in ['train', 'devel']:
+                            continue
+                        else:
+                            print(f'Computing {name} pp...', flush=True)
+
+                        pp_sum = 0
+                        num_steps = 0
+                        for x, y in gen_batches(sequences, tokenizer, eval_batch_size):
+                            loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
+                            pp = torch.exp(loss).detach().cpu().numpy().item()
+                            pp_sum += pp
+                            num_steps += 1
+                            model.zero_grad()
+                        pp = pp_sum / num_steps
+                        name2xy['train_pps'].append((step, pp))
+                        print(f'{name} pp={pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob('*.txt'):
                     do_probing(save_path, sentences_path, tokenizer, model, step, params.include_punctuation)
 
-                if max_step - step < configs.Eval.interval: # no point in continuing training
+                if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)
                     break
 

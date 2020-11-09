@@ -11,23 +11,23 @@ from transformers import BertForPreTraining
 
 from babybert import configs
 from babybert.io import save_yaml_file
-from babybert.utils import gen_batches, BBPESequence, make_bbpe_sequences
+from babybert.utils import gen_batches, make_sequences
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
 def predict_open_ended(model: BertForPreTraining,
                        tokenizer: RobertaTokenizerFast,
-                       bbpe_sequences: List[BBPESequence],
+                       sequences: List[str],
                        ) -> List[str]:
-
+    model.eval()
     res = []
 
-    for x, _ in gen_batches(bbpe_sequences, tokenizer, configs.Eval.batch_size, no_labels=True):
+    with torch.no_grad():
 
-        with torch.no_grad():
+        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size, insert_masks=False):
 
             # get logits for all words in batch
-            output = model(**attr.asdict(x))
+            output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
             logits_3d = output[0].detach()
 
             # get predicted words for masked locations
@@ -44,28 +44,29 @@ def predict_open_ended(model: BertForPreTraining,
 
 def predict_forced_choice(model: BertForPreTraining,
                           tokenizer: RobertaTokenizerFast,
-                          bbpe_sequences: List[BBPESequence],
+                          sequences: List[str],
                           ) -> List[float]:
+    model.eval()
     cross_entropies = []
     loss_fct = CrossEntropyLoss(reduction='none')
 
-    for x, _ in gen_batches(bbpe_sequences, tokenizer, configs.Eval.batch_size, no_labels=True):
+    with torch.no_grad():
 
-        with torch.no_grad():
-            # logits
-            output = model(**attr.asdict(x))
+        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size, insert_masks=False):
+
+            # get loss
+            output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
             logits_3d = output[0]
+            logits_for_all_words = logits_3d.permute(0, 2, 1)
+            labels = x.input_ids.cuda()
+            loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
+                            labels,  # need to be [batch size, seq length]
+                            )
 
             # compute avg cross entropy per sentence
-            labels = x.input_ids
-            # logits need to be [batch size, vocab size, seq length]
-            # tags need to be [batch size, seq length]
-            loss = loss_fct(logits_3d.permute(0, 2, 1), labels)
-
-            # we need 1 loss value per sentence.
             # to do so, we must exclude loss for padding symbols, using attention_mask
             cross_entropies += [row[np.where(row_mask)[0]].mean().item()
-                                for row, row_mask in zip(loss, x.attention_mask.cpu().numpy())]
+                                for row, row_mask in zip(loss, x.attention_mask.numpy())]
 
     return cross_entropies
 
@@ -86,8 +87,8 @@ def do_probing(save_path: Path,
     # load probing sentences
     print(f'Starting probing with task={task_name}', flush=True)
     sentences = load_sentences_from_file(sentences_in_path, include_punctuation=include_punctuation)
-    bbpe_sequences = make_bbpe_sequences(sentences, tokenizer, num_masked=0, num_sentences_per_input=1)
-    assert len(bbpe_sequences) == len(sentences)
+    sequences = make_sequences(sentences, num_sentences_per_input=1)
+    assert len(sequences) == len(sentences)
 
     # prepare out path
     probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
@@ -103,12 +104,12 @@ def do_probing(save_path: Path,
 
     # do inference on forced-choice task
     if task_type == 'forced_choice':
-        cross_entropies = predict_forced_choice(model, tokenizer, bbpe_sequences)
+        cross_entropies = predict_forced_choice(model, tokenizer, sequences)
         save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
     # do inference on open_ended task
     elif task_type == 'open_ended':
-        predicted_words = predict_open_ended(model, tokenizer, bbpe_sequences)
+        predicted_words = predict_open_ended(model, tokenizer, sequences)
         save_open_ended_predictions(sentences, predicted_words, probing_results_path,
                                     verbose=True if 'dummy' in task_name else False)
     else:

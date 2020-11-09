@@ -2,7 +2,9 @@
 param2requests = {
     'bbpe': ['c-n-w-8192'],
     'corpus_name': ['wiki-20191017-hebb-3M_tokenized'],  #, 'childes-20201026', 'newsela'],
+    'num_layers': [2],
     'num_sentences_per_input': [1],
+    'num_masked': [1],
 }
 
 

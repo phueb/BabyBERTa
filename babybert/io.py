@@ -120,7 +120,6 @@ def load_sentences_from_file(file_path: Path,
         raise AttributeError('Invalid arg to "training_order".')
 
     sentences = [' '.join(ts) for ts in tokenized_sentences]
-    print('Finished loading', flush=True)
     return sentences
 
 
