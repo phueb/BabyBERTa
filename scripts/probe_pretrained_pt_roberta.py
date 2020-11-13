@@ -8,7 +8,7 @@ from babybert.io import save_yaml_file
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-CHECKPOINT_OR_PRETRAINED_NAME = 'roberta.base'  # 'roberta.base'
+CHECKPOINT_OR_PRETRAINED_NAME = 'checkpoint_last'  # 'roberta.base'
 
 
 def probe_pretrained_roberta(model: RobertaModel,
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     try:
         roberta = torch.hub.load('pytorch/fairseq', CHECKPOINT_OR_PRETRAINED_NAME)
         print(f'Loaded {CHECKPOINT_OR_PRETRAINED_NAME} from torch.hub')
-        steps = ['best']
+        steps = [CHECKPOINT_OR_PRETRAINED_NAME.split('_')[-1]]
         models = [roberta]
         names = [CHECKPOINT_OR_PRETRAINED_NAME]
 
