@@ -1,9 +1,10 @@
 
 param2requests = {
     'bbpe': ['c-n-w-8192'],
-    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
-    # 'corpus_name': ['childes-20201026'],
+    # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
+    'corpus_name': ['newsela'],
     'num_masked': [8],
+    'consecutive_masking': [True, False],
 }
 
 
@@ -15,10 +16,11 @@ param2debug = {
 
 param2default = {
     # data
+    'consecutive_masking': True,  # if true, sequences with the same content but different mask are in same batch
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, must be 1 to get good number-agreement
     'include_punctuation': True,
     'training_order': 'age-ordered',
-    'num_masked': 6,
+    'num_masked': 8,
     'corpus_name': 'childes-20201026',
     'bbpe': 'c-n-w-8192',
 
