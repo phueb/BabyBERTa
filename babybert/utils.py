@@ -94,7 +94,7 @@ def get_masked_indices(batch_encoding: BatchEncoding,
 def tokenize_and_mask(sequences_in_batch: List[str],
                       masked_locations: List[int],
                       tokenizer: RobertaTokenizerFast,
-                      num_masked: int,
+                      probing: bool,
                       ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
 
     batch_encoding = tokenizer.batch_encode_plus(sequences_in_batch,
@@ -106,7 +106,7 @@ def tokenize_and_mask(sequences_in_batch: List[str],
 
     # mask - only once per sequence
     mask_pattern = torch.zeros_like(batch_encoding.data['input_ids'], dtype=torch.bool)
-    if num_masked:
+    if not probing:
         row_indices, col_indices = get_masked_indices(batch_encoding, masked_locations)
         mask_pattern[row_indices, col_indices] = 1
         assert torch.sum(mask_pattern) == len(mask_pattern)
@@ -122,7 +122,7 @@ def tokenize_and_mask(sequences_in_batch: List[str],
                      )
 
     # encode labels -> y
-    if not num_masked:  # when probing
+    if probing:  # when probing
         y = None
     else:
         y = batch_encoding.data['input_ids'].clone().detach().requires_grad_(False)[mask_pattern]
@@ -133,15 +133,26 @@ def tokenize_and_mask(sequences_in_batch: List[str],
 def gen_batches(sequences: List[str],
                 tokenizer: RobertaTokenizerFast,
                 batch_size: int,
-                num_masked: int,
                 consecutive_masking: bool,
+                num_masked: Optional[int] = None,
+                probing: Optional[bool] = None,
                 ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
+
+    # must specify one of the two
+    if num_masked is None and probing is None:
+        raise ValueError('Must specify  either num_masked or probing.')
+
+    if probing:
+        num_masked = 1  # probing sentences are not duplicated
+    if num_masked:
+        probing = False
+
 
     # selector selects which sequences are put in same batch (based on masked locations)
     selector = Selector(sequences, tokenizer, batch_size, num_masked)
 
     for sequences_in_batch, masked_locations in selector.gen_batch_sized_chunks(consecutive_masking):
-        yield from tokenize_and_mask(sequences_in_batch, masked_locations, tokenizer, num_masked)
+        yield from tokenize_and_mask(sequences_in_batch, masked_locations, tokenizer, probing)
 
 
 def forward_mlm(model, mask_token_id, loss_fct, x, y):

@@ -25,7 +25,7 @@ def predict_open_ended(model: BertForPreTraining,
     with torch.no_grad():
 
         for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size,
-                                num_masked=0, consecutive_masking=True):
+                                consecutive_masking=True, probing=True):
 
             # get logits for all words in batch
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
@@ -39,6 +39,9 @@ def predict_open_ended(model: BertForPreTraining,
             assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))  # number of mask symbols should be number of sentences
 
             res.extend(predicted_words)
+
+    if not res:
+        raise RuntimeError('Did not compute predicted words for open_ended task.')
 
     return res
 
@@ -54,7 +57,7 @@ def predict_forced_choice(model: BertForPreTraining,
     with torch.no_grad():
 
         for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size,
-                                num_masked=0, consecutive_masking=True):
+                                consecutive_masking=True, probing=True):
 
             # get loss
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
@@ -69,6 +72,9 @@ def predict_forced_choice(model: BertForPreTraining,
             # to do so, we must exclude loss for padding symbols, using attention_mask
             cross_entropies += [row[np.where(row_mask)[0]].mean().item()
                                 for row, row_mask in zip(loss, x.attention_mask.numpy())]
+
+    if not cross_entropies:
+        raise RuntimeError('Did not compute cross entropies for forced_choice task.')
 
     return cross_entropies
 

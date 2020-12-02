@@ -128,7 +128,7 @@ def main(param2val):
     # train + eval loop
     for epoch_id in range(params.num_epochs):  # TODO test epochs
         for x, y in gen_batches(train_sequences, tokenizer,
-                                params.batch_size, params.num_masked, params.consecutive_masking):
+                                params.batch_size, params.consecutive_masking, params.num_masked):
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 # forward
@@ -158,7 +158,7 @@ def main(param2val):
                         pp_sum = 0
                         num_steps = 0
                         for x, y in gen_batches(sequences, tokenizer, eval_batch_size,
-                                                params.num_masked, params.consecutive_masking):
+                                                params.consecutive_masking, params.num_masked):
                             loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
                             pp = torch.exp(loss).detach().cpu().numpy().item()
                             pp_sum += pp
