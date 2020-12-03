@@ -4,7 +4,6 @@ param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
     'corpus_name': ['newsela'],
     'num_masked': [8],
-    'consecutive_masking': [True, False],
 }
 
 
@@ -16,7 +15,7 @@ param2debug = {
 
 param2default = {
     # data
-    'consecutive_masking': True,  # if true, sequences with the same content but different mask are in same batch
+    'consecutive_masking': False,  # better dev pp when false
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, must be 1 to get good number-agreement
     'include_punctuation': True,
     'training_order': 'age-ordered',

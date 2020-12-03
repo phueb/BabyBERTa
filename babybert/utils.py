@@ -133,8 +133,8 @@ def tokenize_and_mask(sequences_in_batch: List[str],
 def gen_batches(sequences: List[str],
                 tokenizer: RobertaTokenizerFast,
                 batch_size: int,
-                consecutive_masking: bool,
-                num_masked: Optional[int] = None,
+                consecutive_masking: bool,  # if true, duplicated sequences are in same batch
+                num_masked: Optional[int] = None,  # number of times to duplicate a sequence (each with different mask)
                 probing: Optional[bool] = None,
                 ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
 
@@ -143,8 +143,10 @@ def gen_batches(sequences: List[str],
         raise ValueError('Must specify  either num_masked or probing.')
 
     if probing:
+        assert num_masked is None
         num_masked = 1  # probing sentences are not duplicated
     if num_masked:
+        assert probing is None
         probing = False
 
 
