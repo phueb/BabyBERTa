@@ -1,5 +1,6 @@
 import torch
 from torch.nn import CrossEntropyLoss
+from pathlib import Path
 from fairseq import utils
 from fairseq.models.roberta import RobertaModel
 
@@ -17,8 +18,14 @@ def probe_pretrained_roberta(model: RobertaModel,
                              ):
     print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
     model.eval()
-    rep_name = '0'
-    save_path = configs.Dirs.probing_results / architecture_name / rep_name / 'saves'
+
+    # determine rep_name  # todo test
+    rep = 0
+    save_path = configs.Dirs.probing_results / architecture_name / str(rep) / 'saves'
+    while save_path.exists():
+        rep += 1
+        save_path = save_path.parent.parent / str(rep) / 'saves'
+
     # for each probing task
     assert configs.Dirs.probing_sentences.exists()
     for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):

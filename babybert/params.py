@@ -4,6 +4,11 @@ param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
     'corpus_name': ['newsela'],
     'num_masked': [8],
+
+    'hidden_size': [768],
+    'num_layers': [12],
+    'num_attention_heads': [12],
+    'intermediate_size': [1024],
 }
 
 

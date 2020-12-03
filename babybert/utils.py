@@ -145,10 +145,9 @@ def gen_batches(sequences: List[str],
     if probing:
         assert num_masked is None
         num_masked = 1  # probing sentences are not duplicated
-    if num_masked:
+    elif num_masked:
         assert probing is None
         probing = False
-
 
     # selector selects which sequences are put in same batch (based on masked locations)
     selector = Selector(sequences, tokenizer, batch_size, num_masked)
