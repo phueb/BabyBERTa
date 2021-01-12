@@ -46,6 +46,20 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
 To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.
 
+## BabyBERT vs. fairseq RoBERTa
+To train a BabyBERT like model using `fairseq`, make sure to use the following command line arguments: 
+
+```bash
+--fp32
+--batch-size 16
+--clip-norm 1.0 (assuming this is the gradient norm, which I clip to 1.0 instead of 0.0)
+--lr-scheduler linear_decay
+--adam-betas '(0.9, 0.999)'
+--weight-decay 0.0
+--update-freq 1
+--total-num-update 160000
+```
+
 ## Pre-processing Pipeline
 
 1. Raw text data, in `txt` files, was previously tokenized using `spacy` which splits on contractions.
@@ -65,7 +79,7 @@ compared to when punctuation is included and punctuation tokens are not excluded
 One might think that excluding steps in which punctuation is predicted (there are 20K of these) would save training time,
  without sacrificing performance, but results show that performance is significantly sacrificed. 
 
-## Using the code
+## Running multiple simulations at the same time
 
 Code in this repository is executed using [Ludwig](https://github.com/phueb/Ludwig),
  a library for running GPU-bound Python jobs on dedicated machines owned by the UIUC Learning & Language Lab.
