@@ -7,7 +7,7 @@ from tokenizers import ByteLevelBPETokenizer
 from babybert import configs
 
 
-VOCAB_SIZE = 4096 * 2
+VOCAB_SIZE = 4096 * 4
 MIN_FREQUENCY = 10
 CORPUS_NAMES = ['childes-20201026', 'newsela', 'wiki-20191017-hebb-3M_tokenized']
 

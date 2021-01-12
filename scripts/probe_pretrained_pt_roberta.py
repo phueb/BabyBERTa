@@ -1,6 +1,5 @@
 import torch
 from torch.nn import CrossEntropyLoss
-from pathlib import Path
 from fairseq import utils
 from fairseq.models.roberta import RobertaModel
 
@@ -9,7 +8,8 @@ from babybert.io import save_yaml_file
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-CHECKPOINT_OR_PRETRAINED_NAME = 'checkpoint_last'  # 'roberta.base'
+ROBERTA_NAME = 'roberta_jan6'    # 'roberta.base'
+CHECKPOINT_NAME = 'checkpoint_last'
 
 
 def probe_pretrained_roberta(model: RobertaModel,
@@ -102,22 +102,22 @@ if __name__ == '__main__':
 
     # load from torch.hub
     try:
-        roberta = torch.hub.load('pytorch/fairseq', CHECKPOINT_OR_PRETRAINED_NAME)
-        print(f'Loaded {CHECKPOINT_OR_PRETRAINED_NAME} from torch.hub')
-        steps = [CHECKPOINT_OR_PRETRAINED_NAME.split('_')[-1]]
+        roberta = torch.hub.load('pytorch/fairseq', ROBERTA_NAME)
+        print(f'Loaded {ROBERTA_NAME} from torch.hub')
+        steps = ['unknown']
         models = [roberta]
-        names = [CHECKPOINT_OR_PRETRAINED_NAME]
+        names = [ROBERTA_NAME]
 
     # load custom models
     except RuntimeError as e:
         print(e)
-        for architecture_path in (configs.Dirs.root / 'pretrained_models').glob('*'):
+        for architecture_path in (configs.Dirs.root / 'pretrained_models').glob(ROBERTA_NAME):
             print(f'Loading model from {architecture_path}')
             roberta = RobertaModel.from_pretrained(str(architecture_path / 'checkpoints'),
-                                                   checkpoint_file=f'{CHECKPOINT_OR_PRETRAINED_NAME}.pt',
+                                                   checkpoint_file=f'{CHECKPOINT_NAME}.pt',
                                                    data_name_or_path=str(architecture_path / 'data-bin'),
                                                    )
-            step = CHECKPOINT_OR_PRETRAINED_NAME.split('_')[-1]
+            step = CHECKPOINT_NAME.split('_')[-1]
             models.append(roberta)
             steps.append(step)
             names.append(architecture_path.name)

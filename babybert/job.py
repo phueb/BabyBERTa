@@ -150,8 +150,7 @@ def main(param2val):
                 is_evaluated_at_current_step = True
 
                 # pp
-                skip_pp = step == 0 and not configs.Eval.eval_pp_at_step_zero
-                if not skip_pp:
+                if configs.Eval.eval_pp:
                     model.eval()
                     for sequences, name in zip([devel_sequences], ['devel']):
                         print(f'Computing {name} pp...', flush=True)

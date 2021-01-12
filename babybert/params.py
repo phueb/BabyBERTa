@@ -3,12 +3,13 @@ param2requests = {
     'bbpe': ['c-n-w-8192'],
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
     'corpus_name': ['newsela'],
-    'num_masked': [8],
+    'num_masked': [4],
+    'num_epochs': [2],
 
-    'hidden_size': [768],
-    'num_layers': [12],
-    'num_attention_heads': [12],
-    'intermediate_size': [1024],
+    # 'hidden_size': [768],
+    # 'num_layers': [12],
+    # 'num_attention_heads': [12],
+    # 'intermediate_size': [1024],
 }
 
 
