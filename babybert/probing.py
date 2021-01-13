@@ -11,7 +11,8 @@ from transformers import BertForPreTraining
 
 from babybert import configs
 from babybert.io import save_yaml_file
-from babybert.utils import gen_batches, make_sequences
+from babybert.utils import make_sequences
+from babybert.batcher import gen_batches
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
@@ -25,7 +26,7 @@ def predict_open_ended(model: BertForPreTraining,
     with torch.no_grad():
 
         for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size,
-                                consecutive_masking=True, probing=True):
+                                consecutive_masking=True, num_mask_patterns=1, mask_pattern_size=0):
 
             # get logits for all words in batch
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
@@ -57,7 +58,7 @@ def predict_forced_choice(model: BertForPreTraining,
     with torch.no_grad():
 
         for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size,
-                                consecutive_masking=True, probing=True):
+                                consecutive_masking=True, num_mask_patterns=1, mask_pattern_size=0):
 
             # get loss
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})

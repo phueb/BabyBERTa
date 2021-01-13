@@ -1,14 +1,10 @@
 import random
 import torch
-from typing import Tuple, List, Optional, Generator, Union
+from typing import Tuple, List
 import attr
 from itertools import islice
 
-from transformers import RobertaTokenizerFast, BatchEncoding
-from transformers.modeling_roberta import create_position_ids_from_input_ids
-
 from babybert import configs
-from babybert.selector import Selector
 
 
 @attr.s(slots=True, frozen=True)
@@ -68,92 +64,6 @@ def split(data: List[str],
     print(f'num test  sequences={len(test):,}' , flush=True)
 
     return train, devel, test
-
-
-def get_masked_indices(batch_encoding: BatchEncoding,
-                       masked_locations: List[int]
-                       ) -> Tuple[List[int], List[int]]:
-    """
-    inserts only 1 mask per sequence.
-    does not mask padding, bos, or eos symbols.
-    """
-    row_indices = []
-    col_indices = []
-    assert len(batch_encoding.encodings) == len(masked_locations)
-    for row_id, (encoding, ml) in enumerate(zip(batch_encoding.encodings,
-                                                masked_locations)):
-        col_id = ml + 1  # because of BOS symbol
-        max_mask_location = sum(encoding.attention_mask) - 1  # because of EOS symbol
-        assert col_id < max_mask_location
-        row_indices.append(row_id)
-        col_indices.append(col_id)
-
-    return row_indices, col_indices
-
-
-def tokenize_and_mask(sequences_in_batch: List[str],
-                      masked_locations: List[int],
-                      tokenizer: RobertaTokenizerFast,
-                      probing: bool,
-                      ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
-
-    batch_encoding = tokenizer.batch_encode_plus(sequences_in_batch,
-                                                 is_pretokenized=False,
-                                                 max_length=configs.Data.max_sequence_length,
-                                                 padding=True,
-                                                 truncation=True,
-                                                 return_tensors='pt')
-
-    # mask - only once per sequence
-    mask_pattern = torch.zeros_like(batch_encoding.data['input_ids'], dtype=torch.bool)
-    if not probing:
-        row_indices, col_indices = get_masked_indices(batch_encoding, masked_locations)
-        mask_pattern[row_indices, col_indices] = 1
-        assert torch.sum(mask_pattern) == len(mask_pattern)
-    input_ids_with_mask = torch.where(mask_pattern,
-                                      torch.tensor(tokenizer.mask_token_id),
-                                      batch_encoding.data['input_ids'])
-
-    # encode sequences -> x
-    x = RobertaInput(input_ids=input_ids_with_mask,
-                     attention_mask=batch_encoding.data['attention_mask'],
-                     position_ids=create_position_ids_from_input_ids(batch_encoding.data['input_ids'],
-                                                                     tokenizer.pad_token_id),
-                     )
-
-    # encode labels -> y
-    if probing:  # when probing
-        y = None
-    else:
-        y = batch_encoding.data['input_ids'].clone().detach().requires_grad_(False)[mask_pattern]
-
-    yield x, y
-
-
-def gen_batches(sequences: List[str],
-                tokenizer: RobertaTokenizerFast,
-                batch_size: int,
-                consecutive_masking: bool,  # if true, duplicated sequences are in same batch
-                num_masked: Optional[int] = None,  # number of times to duplicate a sequence (each with different mask)
-                probing: Optional[bool] = None,
-                ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
-
-    # must specify one of the two
-    if num_masked is None and probing is None:
-        raise ValueError('Must specify  either num_masked or probing.')
-
-    if probing:
-        assert num_masked is None
-        num_masked = 1  # probing sentences are not duplicated
-    elif num_masked:
-        assert probing is None
-        probing = False
-
-    # selector selects which sequences are put in same batch (based on masked locations)
-    selector = Selector(sequences, tokenizer, batch_size, num_masked)
-
-    for sequences_in_batch, masked_locations in selector.gen_batch_sized_chunks(consecutive_masking):
-        yield from tokenize_and_mask(sequences_in_batch, masked_locations, tokenizer, probing)
 
 
 def forward_mlm(model, mask_token_id, loss_fct, x, y):

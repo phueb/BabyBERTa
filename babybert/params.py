@@ -1,10 +1,9 @@
 
 param2requests = {
-    'bbpe': ['c-n-w-8192'],
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
     'corpus_name': ['newsela'],
-    'num_masked': [4],
-    'num_epochs': [2],
+    'mask_pattern_size': [1, 2, 3, 4],    # todo test
+    'num_mask_patterns': [8],
 
     # 'hidden_size': [768],
     # 'num_layers': [12],
@@ -14,7 +13,7 @@ param2requests = {
 
 
 param2debug = {
-    'num_masked': 1,
+    'num_mask_patterns': 1,
     'num_layers': 2,
     'num_sentences_per_input': 1,
 }
@@ -24,8 +23,9 @@ param2default = {
     'consecutive_masking': False,  # better dev pp when false
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, must be 1 to get good number-agreement
     'include_punctuation': True,
-    'training_order': 'age-ordered',
-    'num_masked': 8,
+    'training_order': 'none',  # 'age-ordered' is better for CHILDES data
+    'num_mask_patterns': 8,
+    'mask_pattern_size': 1,
     'corpus_name': 'childes-20201026',
     'bbpe': 'c-n-w-8192',
 
