@@ -42,15 +42,7 @@ def get_masked_indices(batch_encoding: BatchEncoding,
         # collect possibly multiple mask locations per single sequence
         for mi in mask_pattern:
             col_id = mi + 1  # handle bos symbol
-
-            # todo
-            if not col_id <= last_col_id:
-                print(col_id, last_col_id)
-                print(encoding.tokens)
-                print(encoding.attention_mask)
-
             assert col_id <= last_col_id
-
             row_indices.append(row_id)
             col_indices.append(col_id)
 

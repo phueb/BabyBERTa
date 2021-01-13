@@ -39,10 +39,11 @@ class Batcher:
         - num_mask_patterns is dynamically adjusted if number of possible patterns is smaller than num_mask_patterns.
         """
         tokenized = self.tokenizer.tokenize(sequence, add_special_tokens=False)
-        num_tokens = min(configs.Data.max_sequence_length, len(tokenized))  # prevent truncated token from being masked
+        num_tokens = min(configs.Data.max_sequence_length - 2,  # -2 because we need to fit eos and bos symbols
+                         len(tokenized))  # prevent truncation - possibly resulting in mask located in overflow region
         pattern_size = min(self.mask_pattern_size, num_tokens)
 
-        # make all patterns for given sequence
+        # sample patterns from population of all possible patterns
         all_mask_patterns = list(combinations(range(num_tokens), pattern_size))
         num_patterns = min(self.num_mask_patterns, len(all_mask_patterns))
         for mask_pattern in random.sample(all_mask_patterns, k=num_patterns):
