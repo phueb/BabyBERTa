@@ -1,8 +1,8 @@
 
 param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
-    'corpus_name': ['newsela'],
-    'mask_pattern_size': [1, 2, 3],    # todo test
+    'corpus_name': ['wiki-20191017-hebb-3M_tokenized'],
+    'mask_pattern_size': [1, 2, 3],
     'num_mask_patterns': [8],
 
     # 'hidden_size': [768],

@@ -32,12 +32,25 @@ def get_masked_indices(batch_encoding: BatchEncoding,
     col_indices = []
     assert len(batch_encoding.encodings) == len(mask_patterns)
     for row_id, (encoding, mask_pattern) in enumerate(zip(batch_encoding.encodings, mask_patterns)):
-        last_col_id = get_last_col_id(encoding)
+
+        if encoding.overflowing:  # sequence was truncated so mask location could be in truncated region
+            raise RuntimeError('Overflowing sequences are not allowed. '
+                               'Masked indices may be in overflowing region')
+        else:
+            last_col_id = get_last_col_id(encoding)
 
         # collect possibly multiple mask locations per single sequence
         for mi in mask_pattern:
             col_id = mi + 1  # handle bos symbol
+
+            # todo
+            if not col_id <= last_col_id:
+                print(col_id, last_col_id)
+                print(encoding.tokens)
+                print(encoding.attention_mask)
+
             assert col_id <= last_col_id
+
             row_indices.append(row_id)
             col_indices.append(col_id)
 

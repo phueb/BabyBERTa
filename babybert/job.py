@@ -153,7 +153,7 @@ def main(param2val):
                 is_evaluated_at_current_step = True
 
                 # pp
-                if configs.Eval.eval_pp:
+                if configs.Data.train_prob < 1.0:  # if there are eval and test data
                     model.eval()
                     for sequences, name in zip([devel_sequences], ['devel']):
                         print(f'Computing {name} pp...', flush=True)
