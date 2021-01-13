@@ -56,13 +56,18 @@ def tokenize_and_mask(sequences_in_batch: List[str],
                                                  truncation=True,
                                                  return_tensors='pt')
 
-    # add mask symbols to input ids
-    mask_pattern = torch.zeros_like(batch_encoding.data['input_ids'], dtype=torch.bool)
-    if len(mask_patterns[0]) > 0:  # otherwise, probing
+    mask_pattern_size = len(mask_patterns[0])
+
+    # add mask symbols to input ids, if not probing
+    mask_matrix = torch.zeros_like(batch_encoding.data['input_ids'], dtype=torch.bool)
+    if mask_pattern_size > 0:  # otherwise, probing
         row_indices, col_indices = get_masked_indices(batch_encoding, mask_patterns)
-        mask_pattern[row_indices, col_indices] = 1
-        assert torch.sum(mask_pattern) == len(mask_pattern)
-    input_ids_with_mask = torch.where(mask_pattern,
+        mask_matrix[row_indices, col_indices] = 1
+        # check masking
+        num_masks = torch.sum(mask_matrix)
+        num_expected_masks = len(mask_patterns) * mask_pattern_size
+        assert num_masks == num_expected_masks
+    input_ids_with_mask = torch.where(mask_matrix,
                                       torch.tensor(tokenizer.mask_token_id),
                                       batch_encoding.data['input_ids'])
 
@@ -74,9 +79,9 @@ def tokenize_and_mask(sequences_in_batch: List[str],
                      )
 
     # y
-    if len(mask_patterns[0]) == 0:  # there are no mask patterns when probing
+    if mask_pattern_size == 0:  # there are no mask patterns when probing
         y = None
     else:
-        y = batch_encoding.data['input_ids'].clone().detach().requires_grad_(False)[mask_pattern]
+        y = batch_encoding.data['input_ids'].clone().detach().requires_grad_(False)[mask_matrix]
 
     yield x, y
