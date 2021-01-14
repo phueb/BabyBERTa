@@ -29,6 +29,7 @@ class Params(object):
     mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))
     bbpe = attr.ib(validator=attr.validators.instance_of(str))
+    max_num_tokens_in_sequence = attr.ib(validator=attr.validators.instance_of(int))
 
     # training
     batch_size = attr.ib(validator=attr.validators.instance_of(int))
@@ -107,7 +108,8 @@ def main(param2val):
                                 params.batch_size,
                                 params.num_mask_patterns,
                                 params.mask_pattern_size,
-                                params.allow_truncated_sentences).gen_batch_sized_chunks(
+                                params.allow_truncated_sentences,
+                                params.max_num_tokens_in_sequence).gen_batch_sized_chunks(
         params.consecutive_masking))) * params.num_epochs
     print(f'max step={max_step:,}', flush=True)
 

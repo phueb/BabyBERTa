@@ -33,11 +33,12 @@ def get_masked_indices(batch_encoding: BatchEncoding,
 def tokenize_and_mask(sequences_in_batch: List[str],
                       mask_patterns: List[Tuple[int]],
                       tokenizer: RobertaTokenizerFast,
+                      max_num_tokens_in_sequence: int,
                       ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None]], None, None]:
 
     batch_encoding = tokenizer.batch_encode_plus(sequences_in_batch,
                                                  is_pretokenized=False,
-                                                 max_length=configs.Data.max_num_tokens_in_sequence,
+                                                 max_length=max_num_tokens_in_sequence,
                                                  padding=True,
                                                  truncation=True,
                                                  return_tensors='pt')

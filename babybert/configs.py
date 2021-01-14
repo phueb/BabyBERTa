@@ -23,8 +23,6 @@ class Data:
     roberta_symbols = [mask_symbol, '<pad>', '<unk>', '<s>', '</s>']
     add_prefix_space = True
 
-    max_num_tokens_in_sequence = 256
-
 
 class Training:
     feedback_interval = 1000

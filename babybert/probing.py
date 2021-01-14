@@ -22,6 +22,7 @@ class ProbingParams:
     num_mask_patterns = 1
     mask_pattern_size = 0
     allow_truncated_sentences = False
+    max_num_tokens_in_sequence = 256
 
 
 def predict_open_ended(model: BertForPreTraining,

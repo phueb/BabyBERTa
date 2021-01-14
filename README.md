@@ -36,12 +36,13 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - smaller vocabulary: ~8K vs ~30K
 - Byte-Pair BPE tokenization (as in RoBERTa)
 - no next-sentence prediction objective (as in RoBERTa)
-- dynamic masking: the same word is never masked more than once in the same utterance (as in RoBERTa)
-- only 1 word per utterance is masked, and masked locations are never replaced by the original or a random word
+- the same masking pattern is never applied to the same sequence (more similar but not identical to RoBERTa)
+- only 2 tokens per sequence are masked, instead of masking each token with probability of 0.15
+- masked locations are never replaced by the original or a random word
 - smaller batch size: 16 vs. 256
 - only 1 complete pass through training data: 1 epoch vs. ~40 epochs
 - training examples are ordered by the age of the child to whom the utterance is directed to
-- examples consist of 1 utterance, as opposed to a pair of segments containing multiple sentences
+- sequences consist of 1 utterance/sentence, as opposed to a pair of segments containing multiple sentences
 
 The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
 To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.

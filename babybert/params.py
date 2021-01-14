@@ -1,12 +1,11 @@
 
 param2requests = {
-    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
-    # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized'],
-    'mask_pattern_size': [1, 2, 3],
-    'num_mask_patterns': [8],
+    # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
+    'corpus_name': ['newsela'],
 
     # todo test
-    # 'allow_truncated_sentences': True,
+    'allow_truncated_sentences': [True],
+    'max_num_tokens_in_sequence': [8, 16, 32, 64],
 
     # 'hidden_size': [768],
     # 'num_layers': [12],
@@ -29,9 +28,10 @@ param2default = {
     'allow_truncated_sentences': False,
     'training_order': 'none',  # 'age-ordered' is better for CHILDES data
     'num_mask_patterns': 8,
-    'mask_pattern_size': 1,
+    'mask_pattern_size': 2,  # 2 is better than 1 and as good as 3
     'corpus_name': 'childes-20201026',
     'bbpe': 'c-n-w-8192',
+    'max_num_tokens_in_sequence': 256,
 
     # training
     'batch_size': 16,
