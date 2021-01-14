@@ -24,6 +24,7 @@ class Params(object):
     num_sentences_per_input = attr.ib(validator=attr.validators.instance_of(int))
     training_order = attr.ib(validator=attr.validators.instance_of(str))
     include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
+    allow_truncated_sentences = attr.ib(validator=attr.validators.instance_of(bool))
     num_mask_patterns = attr.ib(validator=attr.validators.instance_of(int))
     mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))
@@ -105,7 +106,8 @@ def main(param2val):
                                 tokenizer,
                                 params.batch_size,
                                 params.num_mask_patterns,
-                                params.mask_pattern_size).gen_batch_sized_chunks(
+                                params.mask_pattern_size,
+                                params.allow_truncated_sentences).gen_batch_sized_chunks(
         params.consecutive_masking))) * params.num_epochs
     print(f'max step={max_step:,}', flush=True)
 
@@ -129,9 +131,7 @@ def main(param2val):
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):
-        for x, y in gen_batches(train_sequences, tokenizer,
-                                params.batch_size, params.consecutive_masking,
-                                params.num_mask_patterns, params.mask_pattern_size):
+        for x, y in gen_batches(train_sequences, tokenizer, params):
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 # forward
@@ -159,9 +159,7 @@ def main(param2val):
                         print(f'Computing {name} pp...', flush=True)
                         pp_sum = 0
                         num_steps = 0
-                        for x, y in gen_batches(sequences, tokenizer, eval_batch_size,
-                                                params.consecutive_masking,
-                                                params.num_mask_patterns, params.mask_pattern_size):
+                        for x, y in gen_batches(sequences, tokenizer, params, batch_size=eval_batch_size):
                             loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
                             pp = torch.exp(loss).detach().cpu().numpy().item()
                             pp_sum += pp

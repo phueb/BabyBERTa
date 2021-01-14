@@ -56,7 +56,6 @@ def load_sentences_from_file(file_path: Path,
     tokenized_sentences = []
     punctuation = {'.', '?', '!'}
     num_too_small = 0
-    num_too_large = 0
     with file_path.open('r') as f:
 
         for line in f.readlines():
@@ -82,9 +81,6 @@ def load_sentences_from_file(file_path: Path,
                 if len(ts) < configs.Data.min_sentence_length and allow_discard:
                     num_too_small += 1
                     continue
-                if len(ts) > configs.Data.max_sentence_length and allow_discard:
-                    num_too_large += 1
-                    continue
 
                 # lower-case
                 if configs.Data.lowercase_input:
@@ -94,15 +90,14 @@ def load_sentences_from_file(file_path: Path,
                 if not include_punctuation:
                     ts = [w for w in ts if w not in punctuation]
 
-                # prevent tokenization of long words into lots of word pieces
+                # prevent tokenization of long words into lots of sub-tokens
                 if configs.Data.max_word_length is not None:
-                    ts = [w if len(w) < configs.Data.max_word_length else configs.Data.long_symbol
+                    ts = [w if len(w) <= configs.Data.max_word_length else configs.Data.long_symbol
                           for w in ts]
                 tokenized_sentences.append(ts)
 
-    if num_too_small or num_too_large:
-        print(f'WARNING: Skipped {num_too_small:>12,} sentences which are shorter than {configs.Data.min_sentence_length}.')
-        print(f'WARNING: Skipped {num_too_large:>12,} sentences which are larger than {configs.Data.max_sentence_length}.')
+    if num_too_small:
+        print(f'WARNING: Skipped {num_too_small:,} sentences which are shorter than {configs.Data.min_sentence_length}.')
 
     if verbose:
         lengths = [len(u) for u in tokenized_sentences]

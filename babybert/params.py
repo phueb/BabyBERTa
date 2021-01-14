@@ -5,6 +5,9 @@ param2requests = {
     'mask_pattern_size': [1, 2, 3],
     'num_mask_patterns': [8],
 
+    # todo test
+    # 'allow_truncated_sentences': True,
+
     # 'hidden_size': [768],
     # 'num_layers': [12],
     # 'num_attention_heads': [12],
@@ -23,6 +26,7 @@ param2default = {
     'consecutive_masking': False,  # better dev pp when false
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, must be 1 to get good number-agreement
     'include_punctuation': True,
+    'allow_truncated_sentences': False,
     'training_order': 'none',  # 'age-ordered' is better for CHILDES data
     'num_mask_patterns': 8,
     'mask_pattern_size': 1,

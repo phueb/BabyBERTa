@@ -16,6 +16,13 @@ from babybert.batcher import gen_batches
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
+class ProbingParams:
+    batch_size = configs.Eval.batch_size,
+    consecutive_masking = True
+    num_mask_patterns = 1
+    mask_pattern_size = 0
+
+
 def predict_open_ended(model: BertForPreTraining,
                        tokenizer: RobertaTokenizerFast,
                        sequences: List[str],
@@ -25,9 +32,7 @@ def predict_open_ended(model: BertForPreTraining,
 
     with torch.no_grad():
 
-        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size,
-                                consecutive_masking=True, num_mask_patterns=1, mask_pattern_size=0):
-
+        for x, _ in gen_batches(sequences, tokenizer, ProbingParams):
             # get logits for all words in batch
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
             logits_3d = output[0].detach()
@@ -37,7 +42,9 @@ def predict_open_ended(model: BertForPreTraining,
             logits_for_masked_words = logits_3d[mask_locations]  # 2D index into 3D array -> 2D array [num masks, vocab]
             token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
             predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
-            assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))  # number of mask symbols should be number of sentences
+
+            # number of mask symbols should be number of sentences
+            assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))
 
             res.extend(predicted_words)
 
@@ -57,9 +64,7 @@ def predict_forced_choice(model: BertForPreTraining,
 
     with torch.no_grad():
 
-        for x, _ in gen_batches(sequences, tokenizer, configs.Eval.batch_size,
-                                consecutive_masking=True, num_mask_patterns=1, mask_pattern_size=0):
-
+        for x, _ in gen_batches(sequences, tokenizer, ProbingParams):
             # get loss
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
             logits_3d = output[0]
@@ -87,7 +92,6 @@ def do_probing(save_path: Path,
                step: int,
                include_punctuation: bool,
                ) -> None:
-
     model.eval()
 
     task_name = sentences_in_path.stem

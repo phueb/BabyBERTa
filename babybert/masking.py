@@ -3,27 +3,16 @@ from typing import List, Tuple, Generator, Union
 import torch
 from transformers import BatchEncoding, RobertaTokenizerFast
 from transformers.modeling_roberta import create_position_ids_from_input_ids
-from tokenizers import Encoding
 
 from babybert import configs
 from babybert.utils import RobertaInput
-
-
-def get_last_col_id(encoding: Encoding) -> int:
-    """
-    calculate the index of the last token that is not a padding or eos symbol
-    """
-    num_tokens_no_padding = sum(encoding.attention_mask)  # attention mask includes bos and eos symbols
-    num_tokens_no_eos = num_tokens_no_padding - 1
-    res = num_tokens_no_eos - 1  # due to zero-index
-    return res
 
 
 def get_masked_indices(batch_encoding: BatchEncoding,
                        mask_patterns: List[Tuple[int]],
                        ) -> Tuple[List[int], List[int]]:
     """
-    get row and column indices for masking input matrix.
+    get row and column indices for making the matrix used to add mask symbols to input matrix.
 
     notes:
     - mask_pattern is based on tokens without special symbols (eos, bos), so conversion must be done
@@ -32,17 +21,9 @@ def get_masked_indices(batch_encoding: BatchEncoding,
     col_indices = []
     assert len(batch_encoding.encodings) == len(mask_patterns)
     for row_id, (encoding, mask_pattern) in enumerate(zip(batch_encoding.encodings, mask_patterns)):
-
-        if encoding.overflowing:  # sequence was truncated so mask location could be in truncated region
-            raise RuntimeError('Overflowing sequences are not allowed. '
-                               'Masked indices may be in overflowing region')
-        else:
-            last_col_id = get_last_col_id(encoding)
-
-        # collect possibly multiple mask locations per single sequence
+        # a mask pattern may consist of more than one index (of a token to be masked)
         for mi in mask_pattern:
-            col_id = mi + 1  # handle bos symbol
-            assert col_id <= last_col_id
+            col_id = mi + 1  # handle BOS symbol
             row_indices.append(row_id)
             col_indices.append(col_id)
 
@@ -56,7 +37,7 @@ def tokenize_and_mask(sequences_in_batch: List[str],
 
     batch_encoding = tokenizer.batch_encode_plus(sequences_in_batch,
                                                  is_pretokenized=False,
-                                                 max_length=configs.Data.max_sequence_length,
+                                                 max_length=configs.Data.max_num_tokens_in_sequence,
                                                  padding=True,
                                                  truncation=True,
                                                  return_tensors='pt')
