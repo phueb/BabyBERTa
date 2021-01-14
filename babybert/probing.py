@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Union, Tuple, List
+from typing import List
 import numpy as np
 import attr
 
@@ -17,10 +17,11 @@ from babybert.io import load_sentences_from_file, save_forced_choice_predictions
 
 
 class ProbingParams:
-    batch_size = configs.Eval.batch_size,
+    batch_size = configs.Eval.batch_size
     consecutive_masking = True
     num_mask_patterns = 1
     mask_pattern_size = 0
+    allow_truncated_sentences = False
 
 
 def predict_open_ended(model: BertForPreTraining,
