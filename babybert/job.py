@@ -29,6 +29,7 @@ class Params(object):
     mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))
     bbpe = attr.ib(validator=attr.validators.instance_of(str))
+    add_prefix_space = attr.ib(validator=attr.validators.instance_of(bool))
     max_num_tokens_in_sequence = attr.ib(validator=attr.validators.instance_of(int))
 
     # training
@@ -79,7 +80,7 @@ def main(param2val):
     # B-BPE tokenizer - defines input vocabulary
     tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'vocab.json'),
                                      merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'merges.txt'),
-                                     add_prefix_space=configs.Data.add_prefix_space)
+                                     add_prefix_space=params.add_prefix_space)
 
     # load text data
     sentences = load_sentences_from_file(data_path_mlm,

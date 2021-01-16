@@ -3,7 +3,7 @@ from pathlib import Path
 
 from babybert import configs
 
-CORPUS_PATH = Path('/media/research_data/CreateWikiCorpus/runs/param_22/hebb_2019-10-17-23-02-53_num0/more_words_small_bodies.txt')
+CORPUS_PATH = Path('/media/ludwig_data/CreateWikiCorpus/runs/param_22/hebb_2019-10-17-23-02-53_num0/more_words_small_bodies.txt')
 OUT_NAME = 'wiki-20191017-hebb'
 NUM_MILLION_SEQUENCES = 3
 

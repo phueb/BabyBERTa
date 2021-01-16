@@ -6,7 +6,7 @@ class Dirs:
     data = root / 'data'
     corpora = data / 'corpora'
     tokenizers = data / 'tokenizers'
-    probing_sentences = Path('/') / 'media' / 'research_data' / 'Zorro' / 'sentences'
+    probing_sentences = Path('/') / 'media' / 'ludwig_data' / 'Zorro' / 'sentences'
     probing_results = Path.home() / 'Zorro' / 'runs'
     # probing data can be found at https://github.com/phueb/Zorro/tree/master/sentences
 
@@ -21,7 +21,6 @@ class Data:
     mask_symbol = '<mask>'
     universal_symbols = [long_symbol]
     roberta_symbols = [mask_symbol, '<pad>', '<unk>', '<s>', '</s>']
-    add_prefix_space = True
 
 
 class Training:
