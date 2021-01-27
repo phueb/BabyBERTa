@@ -29,6 +29,3 @@ class Training:
 
 class Eval:
     interval = 20_000
-    eval_pp = False
-    batch_size = 128  # 128 is too large when vocab size ~ 8k
-

@@ -1,10 +1,14 @@
 import random
 import torch
+from torch.nn import CrossEntropyLoss
 from typing import Tuple, List
 import attr
 from itertools import islice
 
 from babybert import configs
+
+
+loss_fct = CrossEntropyLoss()
 
 
 @attr.s(slots=True, frozen=True)
@@ -28,9 +32,6 @@ def make_sequences(sentences: List[str],
             break
         sequence = ' '.join(sentences_in_sequence)
         res.append(sequence)
-
-        if len(res) % 100_000 == 0:
-            print(f'Prepared {len(res):>12,} sequences', flush=True)
 
     print(f'Num total sequences={len(res):,}', flush=True)
     return res
@@ -66,11 +67,15 @@ def split(data: List[str],
     return train, devel, test
 
 
-def forward_mlm(model, mask_token_id, loss_fct, x, y):
+def forward_mlm(model,
+                mask_matrix: torch.bool,  # mask_matrix is 2D bool array specifying which tokens to predict
+                x: torch.tensor,
+                y: torch.tensor,
+                ) -> torch.tensor:
     output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
     logits_3d = output[0]
     logits_2d = logits_3d.view(-1, model.config.vocab_size)
-    bool_1d = x.input_ids.view(-1) == mask_token_id
+    bool_1d = mask_matrix.view(-1)
     logits_for_masked_words = logits_2d[bool_1d]
     labels = y.view(-1).cuda()
     loss = loss_fct(logits_for_masked_words,  # [num masks in batch, vocab size]

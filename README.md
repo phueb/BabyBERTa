@@ -43,6 +43,7 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - only 1 complete pass through training data: 1 epoch vs. ~40 epochs
 - training examples are ordered by the age of the child to whom the utterance is directed to
 - sequences consist of 1 utterance/sentence, as opposed to a pair of segments containing multiple sentences
+- L2 weight decay of 0.00 instead of 0.01
 
 The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
 To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.

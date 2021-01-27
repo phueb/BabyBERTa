@@ -4,7 +4,6 @@ import pandas as pd
 import attr
 from pathlib import Path
 import torch
-from torch.nn import CrossEntropyLoss
 
 from transformers import RobertaTokenizerFast
 from transformers import BertForPreTraining, BertConfig
@@ -14,7 +13,7 @@ from babybert import configs
 from babybert.io import load_sentences_from_file
 from babybert.utils import split, make_sequences, forward_mlm
 from babybert.probing import do_probing
-from babybert.batcher import Batcher, gen_batches
+from babybert.dataset import DataSet
 
 
 @attr.s
@@ -27,6 +26,8 @@ class Params(object):
     allow_truncated_sentences = attr.ib(validator=attr.validators.instance_of(bool))
     num_mask_patterns = attr.ib(validator=attr.validators.instance_of(int))
     mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
+    leave_unmasked_prob = attr.ib(validator=attr.validators.instance_of(float))
+    random_token_prob = attr.ib(validator=attr.validators.instance_of(float))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))
     bbpe = attr.ib(validator=attr.validators.instance_of(str))
     add_prefix_space = attr.ib(validator=attr.validators.instance_of(bool))
@@ -37,6 +38,7 @@ class Params(object):
     lr = attr.ib(validator=attr.validators.instance_of(float))
     num_epochs = attr.ib(validator=attr.validators.instance_of(int))
     num_warmup_steps = attr.ib(validator=attr.validators.instance_of(int))
+    weight_decay = attr.ib(validator=attr.validators.instance_of(float))
 
     # model
     num_layers = attr.ib(validator=attr.validators.instance_of(int))
@@ -102,44 +104,39 @@ def main(param2val):
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 
-    # count number of steps in train ing data
-    print('Counting training batches...', flush=True)
-    max_step = len(list(Batcher(train_sequences,
-                                tokenizer,
-                                params.batch_size,
-                                params.num_mask_patterns,
-                                params.mask_pattern_size,
-                                params.allow_truncated_sentences,
-                                params.max_num_tokens_in_sequence).gen_batch_sized_chunks(
-        params.consecutive_masking))) * params.num_epochs
+    train_dataset = DataSet(train_sequences, tokenizer, params)
+    devel_dataset = DataSet(devel_sequences, tokenizer, params)
+    test_dataset = DataSet(test_sequences, tokenizer, params)
+
+    # count number of steps in training data
+    max_step = len(train_dataset.data) // params.batch_size * params.num_epochs
     print(f'max step={max_step:,}', flush=True)
 
     # optimizer + lr schedule
-    optimizer = AdamW(model.parameters(), lr=params.lr, correct_bias=False)  # does not implement lr scheduling
+    optimizer = AdamW(model.parameters(),
+                      lr=params.lr,
+                      weight_decay=params.weight_decay,
+                      correct_bias=False)  # does not implement lr scheduling
     scheduler = get_linear_schedule_with_warmup(optimizer,
                                                 num_warmup_steps=params.num_warmup_steps,
                                                 num_training_steps=max_step)
 
-    # init performance collection
-    name2xy = {}
-
     # init
-    loss_fct = CrossEntropyLoss()
+    name2xy = {}
     train_start = time.time()
     loss = None
     step = 0
     is_evaluated_at_current_step = False
     is_first_time_in_loop = True
-    eval_batch_size = configs.Eval.batch_size // params.num_sentences_per_input  # reduce chance of CUDA memory error
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):
-        for x, y in gen_batches(train_sequences, tokenizer, params):
+        for x, y, mm in train_dataset:
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 # forward
                 model.train()
-                loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
+                loss = forward_mlm(model, mm, x, y)
                 # backward + update
                 loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # otherwise only punctuation is predicted
@@ -158,12 +155,12 @@ def main(param2val):
                 # pp
                 if configs.Data.train_prob < 1.0:  # if there are eval and test data
                     model.eval()
-                    for sequences, name in zip([devel_sequences], ['devel']):
+                    for ds, name in zip([devel_dataset], ['devel']):
                         print(f'Computing {name} pp...', flush=True)
                         pp_sum = 0
                         num_steps = 0
-                        for x, y in gen_batches(sequences, tokenizer, params, batch_size=eval_batch_size):
-                            loss = forward_mlm(model, tokenizer.mask_token_id, loss_fct, x, y)
+                        for x_eval, y_eval, mm_eval in devel_dataset:
+                            loss = forward_mlm(model, mm_eval, x_eval, y_eval)
                             pp = torch.exp(loss).detach().cpu().numpy().item()
                             pp_sum += pp
                             num_steps += 1
@@ -174,7 +171,7 @@ def main(param2val):
 
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob('*.txt'):
-                    do_probing(save_path, sentences_path, tokenizer, model, step, params.include_punctuation)
+                    do_probing(save_path, sentences_path, model, tokenizer, step, params.include_punctuation)
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)

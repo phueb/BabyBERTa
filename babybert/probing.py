@@ -9,41 +9,29 @@ import torch
 from torch.nn import CrossEntropyLoss
 from transformers import BertForPreTraining
 
-from babybert import configs
 from babybert.io import save_yaml_file
 from babybert.utils import make_sequences
-from babybert.batcher import gen_batches
+from babybert.dataset import DataSet
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-class ProbingParams:
-    batch_size = configs.Eval.batch_size
-    consecutive_masking = True
-    num_mask_patterns = 1
-    mask_pattern_size = 0
-    allow_truncated_sentences = False
-    max_num_tokens_in_sequence = 256
-
-
 def predict_open_ended(model: BertForPreTraining,
-                       tokenizer: RobertaTokenizerFast,
-                       sequences: List[str],
+                       dataset: DataSet,
                        ) -> List[str]:
     model.eval()
     res = []
 
     with torch.no_grad():
 
-        for x, _ in gen_batches(sequences, tokenizer, ProbingParams):
+        for x, _, mm in dataset:
             # get logits for all words in batch
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
             logits_3d = output[0].detach()
 
             # get predicted words for masked locations
-            mask_locations = x.input_ids == tokenizer.mask_token_id
-            logits_for_masked_words = logits_3d[mask_locations]  # 2D index into 3D array -> 2D array [num masks, vocab]
+            logits_for_masked_words = logits_3d[mm]  # 2D index into 3D array -> 2D array [num masks, vocab]
             token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
-            predicted_words = tokenizer.convert_ids_to_tokens(token_ids)
+            predicted_words = dataset.tokenizer.convert_ids_to_tokens(token_ids)
 
             # number of mask symbols should be number of sentences
             assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))
@@ -57,8 +45,7 @@ def predict_open_ended(model: BertForPreTraining,
 
 
 def predict_forced_choice(model: BertForPreTraining,
-                          tokenizer: RobertaTokenizerFast,
-                          sequences: List[str],
+                          dataset: DataSet,
                           ) -> List[float]:
     model.eval()
     cross_entropies = []
@@ -66,7 +53,7 @@ def predict_forced_choice(model: BertForPreTraining,
 
     with torch.no_grad():
 
-        for x, _ in gen_batches(sequences, tokenizer, ProbingParams):
+        for x, _, _ in dataset:
             # get loss
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
             logits_3d = output[0]
@@ -88,22 +75,23 @@ def predict_forced_choice(model: BertForPreTraining,
 
 
 def do_probing(save_path: Path,
-               sentences_in_path: Path,
-               tokenizer: RobertaTokenizerFast,
+               sentences_path: Path,
                model: BertForPreTraining,
+               tokenizer: RobertaTokenizerFast,
                step: int,
                include_punctuation: bool,
                ) -> None:
     model.eval()
 
-    task_name = sentences_in_path.stem
-    task_type = sentences_in_path.parent.name
+    task_name = sentences_path.stem
+    task_type = sentences_path.parent.name
 
-    # load probing sentences
+    # load probing sentences into dataset
     print(f'Starting probing with task={task_name}', flush=True)
-    sentences = load_sentences_from_file(sentences_in_path, include_punctuation=include_punctuation)
+    sentences = load_sentences_from_file(sentences_path, include_punctuation=include_punctuation)
     sequences = make_sequences(sentences, num_sentences_per_input=1)
     assert len(sequences) == len(sentences)
+    probing_dataset = DataSet.for_probing(sequences, tokenizer)
 
     # prepare out path
     probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
@@ -119,12 +107,12 @@ def do_probing(save_path: Path,
 
     # do inference on forced-choice task
     if task_type == 'forced_choice':
-        cross_entropies = predict_forced_choice(model, tokenizer, sequences)
+        cross_entropies = predict_forced_choice(model, probing_dataset)
         save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
     # do inference on open_ended task
     elif task_type == 'open_ended':
-        predicted_words = predict_open_ended(model, tokenizer, sequences)
+        predicted_words = predict_open_ended(model, probing_dataset)
         save_open_ended_predictions(sentences, predicted_words, probing_results_path,
                                     verbose=True if 'dummy' in task_name else False)
     else:
