@@ -4,6 +4,10 @@ param2requests = {
     # 'corpus_name': ['childes-20201026'],
 
     'weight_decay': [0.0, 0.1],
+
+    'leave_unmasked_prob': [0.1],
+    'random_token_prob': [0.1],
+
     # 'hidden_size': [768],
     # 'num_layers': [12],
     # 'num_attention_heads': [12],

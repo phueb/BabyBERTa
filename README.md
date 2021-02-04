@@ -40,6 +40,7 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - only 2 tokens per sequence are masked, instead of masking each token with probability of 0.15
 - masked locations are never replaced by the original or a random word
 - smaller batch size: 16 vs. 256
+- each epoch guarantees that all examples in the training data has been seen
 - only 1 complete pass through training data: 1 epoch vs. ~40 epochs
 - training examples are ordered by the age of the child to whom the utterance is directed to
 - sequences consist of 1 utterance/sentence, as opposed to a pair of segments containing multiple sentences

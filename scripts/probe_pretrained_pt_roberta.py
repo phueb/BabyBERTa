@@ -8,8 +8,11 @@ from babybert.io import save_yaml_file
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-ROBERTA_NAME = 'roberta-jan21'    # 'roberta.base'
+ROBERTA_NAME = 'roberta-feb4_dowd'    # 'roberta.base'
 CHECKPOINT_NAME = 'checkpoint_last'
+
+FORCED_CHOICE = True
+OPEN_ENDED = False
 
 
 def probe_pretrained_roberta(model: RobertaModel,
@@ -49,7 +52,7 @@ def probe_pretrained_roberta(model: RobertaModel,
         if not (param_path / 'param2val.yaml').exists():
             save_yaml_file(param2val_path=param_path / 'param2val.yaml', architecture=param_path.name)
 
-        if task_type == 'open_ended':
+        if OPEN_ENDED and task_type == 'open_ended':
             predicted_words = []
             for n, sentence in enumerate(probing_sentences):
                 with torch.no_grad():
@@ -64,7 +67,7 @@ def probe_pretrained_roberta(model: RobertaModel,
             save_open_ended_predictions(probing_sentences, predicted_words, probing_results_path,
                                         verbose=True if 'dummy' in task_name else False)
 
-        elif task_type == 'forced_choice':
+        if FORCED_CHOICE and task_type == 'forced_choice':
             cross_entropies = []
             loss_fct = CrossEntropyLoss(reduction='none')
 
@@ -90,8 +93,6 @@ def probe_pretrained_roberta(model: RobertaModel,
                         f'{n + 1:>6}/{len(probing_sentences):>6} | {ce:.2f} {" ".join([f"{w:<16}" for w in sentence.split()])}')
 
             save_forced_choice_predictions(probing_sentences, cross_entropies, probing_results_path)
-        else:
-            raise AttributeError('Invalid arg to "task_type".')
 
 
 if __name__ == '__main__':
@@ -122,8 +123,11 @@ if __name__ == '__main__':
             steps.append(step)
             names.append(architecture_path.name)
 
-    for m, s, n in zip(models, steps, names):
-        probe_pretrained_roberta(m, s, n)
+    if not models:
+        raise RuntimeError('Did not find models.')
+
+    for model, step, name in zip(models, steps, names):
+        probe_pretrained_roberta(model, step, name)
 
 
 
