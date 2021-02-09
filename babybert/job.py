@@ -1,7 +1,6 @@
 import time
 import numpy as np
 import pandas as pd
-import attr
 from pathlib import Path
 import torch
 
@@ -11,51 +10,10 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
 from babybert.io import load_sentences_from_file
+from babybert.params import Params
 from babybert.utils import split, make_sequences, forward_mlm
 from babybert.probing import do_probing
 from babybert.dataset import DataSet
-
-
-@attr.s
-class Params(object):
-    # data
-    consecutive_masking = attr.ib(validator=attr.validators.instance_of(bool))
-    num_sentences_per_input = attr.ib(validator=attr.validators.instance_of(int))
-    training_order = attr.ib(validator=attr.validators.instance_of(str))
-    include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
-    allow_truncated_sentences = attr.ib(validator=attr.validators.instance_of(bool))
-    num_mask_patterns = attr.ib(validator=attr.validators.instance_of(int))
-    mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
-    leave_unmasked_prob = attr.ib(validator=attr.validators.instance_of(float))
-    random_token_prob = attr.ib(validator=attr.validators.instance_of(float))
-    corpus_name = attr.ib(validator=attr.validators.instance_of(str))
-    bbpe = attr.ib(validator=attr.validators.instance_of(str))
-    add_prefix_space = attr.ib(validator=attr.validators.instance_of(bool))
-    max_num_tokens_in_sequence = attr.ib(validator=attr.validators.instance_of(int))
-
-    # training
-    batch_size = attr.ib(validator=attr.validators.instance_of(int))
-    lr = attr.ib(validator=attr.validators.instance_of(float))
-    num_epochs = attr.ib(validator=attr.validators.instance_of(int))
-    num_warmup_steps = attr.ib(validator=attr.validators.instance_of(int))
-    weight_decay = attr.ib(validator=attr.validators.instance_of(float))
-
-    # model
-    num_layers = attr.ib(validator=attr.validators.instance_of(int))
-    hidden_size = attr.ib(validator=attr.validators.instance_of(int))
-    num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
-    intermediate_size = attr.ib(validator=attr.validators.instance_of(int))
-
-    @classmethod
-    def from_param2val(cls, param2val):
-        """
-        instantiate class.
-        exclude keys from param2val which are added by Ludwig.
-        they are relevant to job submission only.
-        """
-        kwargs = {k: v for k, v in param2val.items()
-                  if k not in ['job_name', 'param_name', 'project_path', 'save_path']}
-        return cls(**kwargs)
 
 
 def main(param2val):

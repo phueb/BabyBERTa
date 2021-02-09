@@ -12,9 +12,11 @@ from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 from babybert import configs
 from babybert.utils import RobertaInput
+from babybert.params import Params
 
 
-class Params:
+class ProbingParams:
+    sample_with_replacement = False
     max_num_tokens_in_sequence = 256
     leave_unmasked_prob = 0.0
     random_token_prob = 0.0
@@ -45,12 +47,12 @@ class DataSet:
             return tuple(res)
 
         data = list(zip(sequences, [_get_mask_pattern_from_probing_sequence(s) for s in sequences]))
-        return cls(sequences, tokenizer, Params, data)
+        return cls(sequences, tokenizer, ProbingParams(), data)
 
     def __init__(self,
                  sequences: List[str],
                  tokenizer: RobertaTokenizerFast,
-                 params,
+                 params: Union[Params, ProbingParams],
                  data: Optional[List[Tuple[str, Tuple[int]]]] = None,
                  ):
         self._sequences = sequences
@@ -159,7 +161,14 @@ class DataSet:
 
     def _gen_data_chunks(self) -> Generator[Tuple[List[str], List[Tuple[int]]], None, None]:
         num_data = len(self.data)
-        for start in range(0, num_data, self.params.batch_size):
+
+        # sample data with or without replacement
+        if self.params.sample_with_replacement:
+            start_ids = np.random.randint(0, num_data - self.params.batch_size, size=num_data // self.params.batch_size)
+        else:
+            start_ids = range(0, num_data, self.params.batch_size)
+
+        for start in start_ids:
             end = min(num_data, start + self.params.batch_size)
             sequences_in_batch, mask_patterns = zip(*self.data[start:end])
             yield list(sequences_in_batch), list(mask_patterns)

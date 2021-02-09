@@ -8,7 +8,7 @@ from babybert.io import save_yaml_file
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-ROBERTA_NAME = 'roberta-feb4_dowd'    # 'roberta.base'
+ROBERTA_NAME = 'roberta-feb7'    # 'roberta.base'
 CHECKPOINT_NAME = 'checkpoint_last'
 
 FORCED_CHOICE = True
