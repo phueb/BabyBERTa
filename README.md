@@ -104,13 +104,6 @@ for token in encoder.bpe.re.findall(encoder.bpe.pat, text):
 print(bpe_tokens)
 ```
 
-## Training observations: Sentence boundary markers 
-
-Model performance on number-agreement degrades when both punctuation is included and punctuation tokens are never masked, 
-compared to when punctuation is included and punctuation tokens are not excluded from MLM.
-One might think that excluding steps in which punctuation is predicted (there are 20K of these) would save training time,
- without sacrificing performance, but results show that performance is significantly sacrificed. 
-
 ## Running multiple simulations at the same time
 
 Code in this repository is executed using [Ludwig](https://github.com/phueb/Ludwig),
