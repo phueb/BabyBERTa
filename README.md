@@ -75,7 +75,36 @@ To train a BabyBERT like model using `fairseq`, make sure to use the following c
 which produces output compatible with the `forward()` method of BabyBERT (a `transfomers.BertModel`)
 
 
-## Training observations
+## Using the BabyBERT vocab
+
+To use our 8192-words vocabulary for training a Roberta model in `fairseq` v0.10.2, 
+
+```python
+from fairseq.data.encoders.gpt2_bpe import GPT2BPE, GPT2BPEConfig
+
+encoder_json_path = 'data/corpora/c-n-w-8192/vocab.json'
+vocab_bpe_path = 'data/corpora/c-n-w-8192/merges.txt'
+cfg = GPT2BPEConfig(gpt2_encoder_json=encoder_json_path,
+                    gpt2_vocab_bpe=vocab_bpe_path)
+encoder = GPT2BPE(cfg)
+```
+
+The resultant object `encoder` can then be passed to `roberta.bpe` to replace the default encoder, 
+ which uses 50k words.
+ 
+To get a feeling for how this encoder splits text, use: 
+
+```python
+bpe_tokens = []
+for token in encoder.bpe.re.findall(encoder.bpe.pat, text):
+    token = "".join(encoder.bpe.byte_encoder[b] for b in token.encode("utf-8"))
+    bpe_tokens.extend(
+        bpe_token for bpe_token in encoder.bpe.bpe(token).split(" ")
+    )
+print(bpe_tokens)
+```
+
+## Training observations: Sentence boundary markers 
 
 Model performance on number-agreement degrades when both punctuation is included and punctuation tokens are never masked, 
 compared to when punctuation is included and punctuation tokens are not excluded from MLM.
