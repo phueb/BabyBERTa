@@ -16,8 +16,9 @@ The goal of this research project is to understand language acquisition from the
 - 2020 (Spring): The BabyBERT project grew out of the BabySRL project led by Cynthia Fisher, Dan Roth, Michael Connor and Yael Gertner, 
 whose published work is available [here](https://www.aclweb.org/anthology/W08-2111/). 
 Having found little benefit for joint SRL and MLM training of a custom (smaller in size) version of BERT,
- a new line of research into BERT's success on syntactic tasks was begun. 
-This led to the development of a model that is more similar to RoBERTa than BERT.
+ a new line of research into BERT's acquisition of syntactic knowledge began. 
+- 2020 (Fall): We discovered that a cognitively more plausible MLM pre-training strategy for a small BERT-like transformer outperformed an identically sized RoBERTa model, trained with standard methods in the `fairseq` library, on a large number of number agreement tasks. 
+- 2021 (Spring): We are curently investigating which modifications of pre-training are most useful for acquiring syntactic knowledge in the small-model and small-data setting for Transformer language models.
  
 ## Probing for syntactic knowledge
 
