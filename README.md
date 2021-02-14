@@ -55,8 +55,7 @@ To train a BabyBERT like model using `fairseq`, make sure to use the following c
 ```bash
 --fp32
 --batch-size 16
---clip-norm 1.0 (assuming this is the gradient norm, which I clip to 1.0 instead of 0.0)
---lr-scheduler linear_decay
+--clip-norm 1.0
 --adam-betas '(0.9, 0.999)'
 --weight-decay 0.0
 --update-freq 1
