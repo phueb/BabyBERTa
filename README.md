@@ -61,6 +61,7 @@ To train a BabyBERT like model using `fairseq`, make sure to use the following c
 --weight-decay 0.0
 --update-freq 1
 --total-num-update 160000
+--sample-break-mode eos  # one complete sentece per sample
 ```
 
 ## Pre-processing Pipeline
@@ -105,6 +106,8 @@ print(bpe_tokens)
 ```
 
 ## Running multiple simulations at the same time
+
+### Dependencies
 
 Code in this repository is executed using [Ludwig](https://github.com/phueb/Ludwig),
  a library for running GPU-bound Python jobs on dedicated machines owned by the UIUC Learning & Language Lab.
