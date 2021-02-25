@@ -1,21 +1,25 @@
 import torch
 from torch.nn import CrossEntropyLoss
 from fairseq import utils
+from fairseq.models.roberta.hub_interface import RobertaHubInterface
 from fairseq.models.roberta import RobertaModel
+from fairseq.data.encoders.gpt2_bpe_utils import Encoder
 
 from babybert import configs
 from babybert.io import save_yaml_file
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-ROBERTA_NAME = 'roberta-feb7'    # 'roberta.base'
+ROBERTA_NAME = 'roberta-feb25'    # 'roberta.base'
 CHECKPOINT_NAME = 'checkpoint_last'
+
+NUM_VOCAB = 8192  # used to check the length of the loaded vocab, pytorch hub models may load an unwanted vocab
 
 FORCED_CHOICE = True
 OPEN_ENDED = False
 
 
-def probe_pretrained_roberta(model: RobertaModel,
+def probe_pretrained_roberta(model: RobertaHubInterface,
                              train_step: str,
                              architecture_name: str,
                              ):
@@ -61,8 +65,7 @@ def probe_pretrained_roberta(model: RobertaModel,
                         if pw:  # sometimes empty string is predicted
                             break
                     predicted_words.append(pw)
-                    sentence_out_string = ' '.join([f'{w:>12}' for w in sentence_out.split()])
-                    print(f'{n + 1:>6}/{len(probing_sentences):>6} | {sentence_out_string}')
+                    print(f'{n + 1:>6}/{len(probing_sentences):>6} | {make_pretty(sentence_out)}')
 
             save_open_ended_predictions(probing_sentences, predicted_words, probing_results_path,
                                         verbose=True if 'dummy' in task_name else False)
@@ -90,9 +93,13 @@ def probe_pretrained_roberta(model: RobertaModel,
                     cross_entropies.append(ce)
 
                     print(
-                        f'{n + 1:>6}/{len(probing_sentences):>6} | {ce:.2f} {" ".join([f"{w:<16}" for w in sentence.split()])}')
+                        f'{n + 1:>6}/{len(probing_sentences):>6} | {ce:.2f} {make_pretty(sentence)}')
 
             save_forced_choice_predictions(probing_sentences, cross_entropies, probing_results_path)
+
+
+def make_pretty(sentence: str):
+    return " ".join([f"{w:<18}" for w in sentence.split()])
 
 
 if __name__ == '__main__':
@@ -114,7 +121,8 @@ if __name__ == '__main__':
         print(e)
         for architecture_path in (configs.Dirs.root / 'pretrained_models').glob(ROBERTA_NAME):
             print(f'Loading model from {architecture_path}')
-            roberta = RobertaModel.from_pretrained(str(architecture_path / 'checkpoints'),
+            model_name_or_path = str(architecture_path / 'checkpoints')
+            roberta = RobertaModel.from_pretrained(model_name_or_path,
                                                    checkpoint_file=f'{CHECKPOINT_NAME}.pt',
                                                    data_name_or_path=str(architecture_path / 'data-bin'),
                                                    )
@@ -127,6 +135,29 @@ if __name__ == '__main__':
         raise RuntimeError('Did not find models.')
 
     for model, step, name in zip(models, steps, names):
+
+        # check encoder of model
+        """
+        to guarantee the correct vocab is loaded, modify cfg in fairseq.fairse.checkpoint_utils by adding:
+        
+        from fairseq.dataclass.utils import overwrite_args_by_name
+        new_bpe_cfg = {
+        '_name': 'gpt2',
+        'gpt2_encoder_json': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/vocab.json',
+        'gpt2_vocab_bpe': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/merges.txt',
+        }
+        overrides = {'bpe': new_bpe_cfg}
+        overwrite_args_by_name(cfg, overrides)
+        print(cfg['bpe'])
+        """
+
+        encoder: Encoder = model.bpe.bpe
+        vocab = encoder.encoder
+        print(f'Found {len(vocab)} words in vocab')
+        if not len(vocab) == NUM_VOCAB:
+            raise RuntimeError(f'Pretrained model state dict points to vocab that is not of size={NUM_VOCAB}')
+
+        # probe
         probe_pretrained_roberta(model, step, name)
 
 

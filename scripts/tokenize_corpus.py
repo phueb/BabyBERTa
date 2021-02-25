@@ -1,3 +1,8 @@
+"""
+This script tokenizes a custom-made Wiki corpus using spacy,
+ so that it matches the tokenization used for the other two corpora (e.g. CHILDES, Newsela).
+It also outputs a corpus that roughly matches the other two in the number of sequences.
+"""
 import spacy
 from pathlib import Path
 
