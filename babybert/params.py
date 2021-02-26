@@ -4,8 +4,8 @@ param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
     'corpus_name': ['newsela'],
 
+    'bbpe': ['c-n-w-8192', 'gpt2_bpe']
 
-    'sample_with_replacement': [True, False],
 
     # 'hidden_size': [768],
     # 'num_layers': [12],
