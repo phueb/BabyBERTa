@@ -38,10 +38,12 @@ def main(param2val):
         save_path.mkdir(parents=True)
 
     # B-BPE tokenizer - defines input vocabulary
+    vocab_fn = 'vocab_converted.json' if params.bbpe == 'gpt2_bpe' else 'vocab.json'
     merges_fn = 'merges_converted.txt' if params.bbpe == 'gpt2_bpe' else 'merges.txt'
-    tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / 'vocab.json'),
+    tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / vocab_fn),
                                      merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / merges_fn),
                                      add_prefix_space=params.add_prefix_space)
+    print(f'Vocab size={tokenizer.vocab_size}')
 
     # load text data
     sentences = load_sentences_from_file(data_path_mlm,
