@@ -88,6 +88,10 @@ if __name__ == '__main__':
 
         chars = prepare_for_filtering(nl)
 
+        if [i for i in nl.split() if i not in vocab]:  # individual token components must be in vocab
+            num_bad_merges += 1
+            continue
+
         if [i for i in chars if i.isdigit()]:
             num_dropped += 1
             continue
@@ -109,8 +113,9 @@ if __name__ == '__main__':
         # collect merges
         new_lines.append(nl)
 
-    print(f'Dropped {num_dropped} tokens from original vocab')
-    print(f'Length of new vocab={len(new_vocab):,}')
+    print(f'Dropped  {num_dropped:,} tokens from original vocab')
+    print(f'Found    {num_bad_merges:,} bad merges')
+    print(f'Included {len(new_vocab):,} in new vocab')
 
     path_out = configs.Dirs.tokenizers / 'gpt2_bpe' / 'merges_converted.txt'
     with path_out.open('w', encoding='utf-8') as f:

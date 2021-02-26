@@ -5260,7 +5260,6 @@ k et
 Ġh its
 Ġg ro
 Ġst im
-Ġª Ġ´
 Ġn arrow
 Ġperfect ly
 Ġen able
@@ -7407,7 +7406,6 @@ re ement
 w a
 Ġfear s
 Ġrem arks
-Ġ¨ Ġ´
 at al
 Ġm it
 Ġexper iments
@@ -8449,7 +8447,6 @@ pp ers
 n atural
 Ġsurv ived
 Ġfl aw
-Ġº Ġ§
 Ġdef icit
 Ġtut orial
 Ġarg uing
@@ -15610,7 +15607,6 @@ id able
 Ġscreens hots
 Ġtravel ers
 Ġsens ory
-Ġ° Ġ­
 Ġchar ming
 Ġenjoy ment
 m ph
@@ -15770,7 +15766,6 @@ u j
 Ġtrans c
 iv o
 Ġhost ility
-Ġµ Ġº
 Ġdis comfort
 spec ified
 Ġimper ative
@@ -16616,7 +16611,6 @@ ser ies
 ela ide
 Ġturn over
 he at
-Ġ» Ġ¤
 iv ism
 Ġir rational
 Ġre ef
@@ -17424,7 +17418,6 @@ ru ce
 port ing
 in ently
 Ġob solete
-Ġ§ Ġ­
 g ive
 Ġb ait
 Ġen larg
@@ -20028,7 +20021,6 @@ g p
 Ġprom inence
 ote chnology
 Ġm ocking
-Ġ¸ Ġ¼
 Ġpsychiat rist
 Ġno isy
 Ġsl apped
@@ -26557,7 +26549,6 @@ uke mia
 Ġcre ed
 Ġbored om
 ri ott
-Ġ¤ Ġ°
 Ġregener ate
 Ġcomed ians
 id ium
@@ -27539,7 +27530,6 @@ ite ch
 Ġinnoc uous
 cess ive
 ag ra
-Ġ£ Ġ¸
 Ġappra isal
 Ġd ocking
 Ġp ont
