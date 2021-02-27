@@ -4,8 +4,8 @@ param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
     'corpus_name': ['newsela'],
 
-    'bbpe': ['gpt2_bpe', 'c-n-w-8192']
 
+    'probabilistic_masking': [True, False],
 
     # 'hidden_size': [768],
     # 'num_layers': [12],
@@ -29,8 +29,9 @@ param2default = {
     'include_punctuation': True,
     'allow_truncated_sentences': False,
     'training_order': 'none',  # 'age-ordered' is better for CHILDES data - must use with consecutive_masking=True
-    'num_mask_patterns': 6, # 6 is better than lower or higher
+    'num_mask_patterns': 6,  # 6 is better than lower or higher
     'mask_pattern_size': 2,  # 2 is better than 1 and as good as 3
+    'probabilistic_masking': False,
     'leave_unmasked_prob': 0.0,
     'random_token_prob': 0.0,
     'corpus_name': 'childes-20201026',
@@ -64,6 +65,7 @@ class Params(object):
     allow_truncated_sentences = attr.ib(validator=attr.validators.instance_of(bool))
     num_mask_patterns = attr.ib(validator=attr.validators.instance_of(int))
     mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
+    probabilistic_masking = attr.ib(validator=attr.validators.instance_of(bool))
     leave_unmasked_prob = attr.ib(validator=attr.validators.instance_of(float))
     random_token_prob = attr.ib(validator=attr.validators.instance_of(float))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))

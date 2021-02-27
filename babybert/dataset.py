@@ -105,14 +105,32 @@ class DataSet:
         - pattern size is dynamically shortened if a tokenized sequence is smaller than mask_pattern_size.
         - num_mask_patterns is dynamically adjusted if number of possible patterns is smaller than num_mask_patterns.
         """
+        random.seed(None)  # use different patterns across different runs
 
         pattern_size = min(self.params.mask_pattern_size, num_tokens_after_truncation)
 
         # sample patterns from population of all possible patterns
         all_mask_patterns = list(combinations(range(num_tokens_after_truncation), pattern_size))
         num_patterns = min(self.params.num_mask_patterns, len(all_mask_patterns))
-        random.seed(None)  # use different patterns across different runs
-        for mask_pattern in random.sample(all_mask_patterns, k=num_patterns):
+
+        # generate mask patterns that are unique
+        predetermined_patterns = iter(random.sample(all_mask_patterns, k=num_patterns))
+
+        num_yielded = 0
+        while num_yielded < num_patterns:
+
+            if self.params.probabilistic_masking:  # todo test
+                prob = self.params.mask_pattern_size / num_tokens_after_truncation
+                # print(f'Masking with probability={self.params.mask_pattern_size}/{num_tokens_after_truncation}={prob}')
+                mask_pattern = tuple([i for i in range(num_tokens_after_truncation) if random.random() < prob])
+            else:
+                mask_pattern = next(predetermined_patterns)
+
+            if mask_pattern:
+                num_yielded += 1
+            else:
+                continue  # pattern can be empty when sampling probabilistically
+
             yield mask_pattern
 
     def _get_tokenized_sequence_lengths(self):
