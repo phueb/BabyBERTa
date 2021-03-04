@@ -10,7 +10,7 @@ from babybert.io import save_yaml_file
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-ROBERTA_NAME = 'roberta-feb25'    # 'roberta.base'
+ROBERTA_NAME = 'roberta-feb26'    # 'roberta.base'
 CHECKPOINT_NAME = 'checkpoint_last'
 
 NUM_VOCAB = 8192  # used to check the length of the loaded vocab, pytorch hub models may load an unwanted vocab

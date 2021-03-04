@@ -60,6 +60,7 @@ def main(param2val):
                              num_hidden_layers=params.num_layers,
                              num_attention_heads=params.num_attention_heads,
                              intermediate_size=params.intermediate_size,
+                             initializer_range=params.initializer_range,
                              )
     model = BertForPreTraining(config=bert_config)  # same as Roberta
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)

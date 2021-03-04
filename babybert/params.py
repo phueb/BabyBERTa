@@ -5,7 +5,7 @@ param2requests = {
     'corpus_name': ['newsela'],
 
 
-    'probabilistic_masking': [True, False],
+    'initializer_range': [0.002, 0.02, 0.2],
 
     # 'hidden_size': [768],
     # 'num_layers': [12],
@@ -41,7 +41,7 @@ param2default = {
 
     # training
     'batch_size': 16,
-    'lr': 1e-4,
+    'lr': 1e-4,  # 3 zeros after decimal
     'num_epochs': 1,
     'num_warmup_steps': 10_000,  # slightly better than 0
     'weight_decay': 0.0,
@@ -51,6 +51,7 @@ param2default = {
     'num_layers': 8,
     'num_attention_heads': 8,
     'intermediate_size': 1024,
+    'initializer_range': 0.02,  # stdev of trunc normal for initializing all weights
 }
 
 
@@ -85,6 +86,7 @@ class Params(object):
     hidden_size = attr.ib(validator=attr.validators.instance_of(int))
     num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
     intermediate_size = attr.ib(validator=attr.validators.instance_of(int))
+    initializer_range = attr.ib(validator=attr.validators.instance_of(float))
 
     @classmethod
     def from_param2val(cls, param2val):
