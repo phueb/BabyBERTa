@@ -5,7 +5,8 @@ param2requests = {
     'corpus_name': ['newsela'],
 
 
-    'initializer_range': [0.002, 0.02, 0.2],
+    'probabilistic_masking': [True],
+    'mask_probability': [0.05, 0.5, 0.15, 0.25, 0.75],  # todo test
 
     # 'hidden_size': [768],
     # 'num_layers': [12],
@@ -32,6 +33,7 @@ param2default = {
     'num_mask_patterns': 6,  # 6 is better than lower or higher
     'mask_pattern_size': 2,  # 2 is better than 1 and as good as 3
     'probabilistic_masking': False,
+    'mask_probability': 0.15,  # used only if probabilistic_masking = true
     'leave_unmasked_prob': 0.0,
     'random_token_prob': 0.0,
     'corpus_name': 'childes-20201026',
@@ -67,6 +69,7 @@ class Params(object):
     num_mask_patterns = attr.ib(validator=attr.validators.instance_of(int))
     mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
     probabilistic_masking = attr.ib(validator=attr.validators.instance_of(bool))
+    mask_probability = attr.ib()
     leave_unmasked_prob = attr.ib(validator=attr.validators.instance_of(float))
     random_token_prob = attr.ib(validator=attr.validators.instance_of(float))
     corpus_name = attr.ib(validator=attr.validators.instance_of(str))

@@ -119,9 +119,13 @@ class DataSet:
         num_yielded = 0
         while num_yielded < num_patterns:
 
-            if self.params.probabilistic_masking:  # todo test
-                prob = self.params.mask_pattern_size / num_tokens_after_truncation
-                # print(f'Masking with probability={self.params.mask_pattern_size}/{num_tokens_after_truncation}={prob}')
+            if self.params.probabilistic_masking:
+                if self.params.mask_probability == 'auto':
+                    prob = self.params.mask_pattern_size / num_tokens_after_truncation
+                elif isinstance(self.params.mask_probability, float) and 0 < self.params.mask_probability < 1:
+                    prob = self.params.mask_probability
+                else:
+                    raise AttributeError('invalid arg to mask_probability')
                 mask_pattern = tuple([i for i in range(num_tokens_after_truncation) if random.random() < prob])
             else:
                 mask_pattern = next(predetermined_patterns)

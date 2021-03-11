@@ -46,6 +46,7 @@ def predict_open_ended(model: BertForPreTraining,
 
 def predict_forced_choice(model: BertForPreTraining,
                           dataset: DataSet,
+                          probe_with_mask: bool,
                           ) -> List[float]:
     model.eval()
     cross_entropies = []
@@ -54,19 +55,34 @@ def predict_forced_choice(model: BertForPreTraining,
     with torch.no_grad():
 
         for x, _, _ in dataset:
-            # get loss
-            output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
-            logits_3d = output[0]
-            logits_for_all_words = logits_3d.permute(0, 2, 1)
-            labels = x.input_ids.cuda()
-            loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
-                            labels,  # need to be [batch size, seq length]
-                            )
 
-            # compute avg cross entropy per sentence
-            # to do so, we must exclude loss for padding symbols, using attention_mask
-            cross_entropies += [row[np.where(row_mask)[0]].mean().item()
-                                for row, row_mask in zip(loss, x.attention_mask.numpy())]
+            if not probe_with_mask:
+                # get loss
+                output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
+                logits_3d = output[0]
+                logits_for_all_words = logits_3d.permute(0, 2, 1)
+                labels = x.input_ids.cuda()
+                loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
+                                labels,  # need to be [batch size, seq length]
+                                )
+
+                # compute avg cross entropy per sentence
+                # to do so, we must exclude loss for padding symbols, using attention_mask
+                cross_entropies += [loss_i[np.where(row_mask)[0]].mean().item()
+                                    for loss_i, row_mask in zip(loss, x.attention_mask.numpy())]
+
+            else: # todo test new probing method
+
+                max_token_pos = x.attention_mask.numpy().sum(axis=1).max()
+                print(x.attention_mask.numpy())
+                print(max_token_pos)
+                raise NotImplementedError
+                for pos in range(max_token_pos):
+
+                    # insert mask at current position
+
+                    pass
+
 
     if not cross_entropies:
         raise RuntimeError('Did not compute cross entropies for forced_choice task.')
@@ -80,6 +96,7 @@ def do_probing(save_path: Path,
                tokenizer: RobertaTokenizerFast,
                step: int,
                include_punctuation: bool,
+               probe_with_mask: bool,
                ) -> None:
     model.eval()
 
@@ -107,7 +124,7 @@ def do_probing(save_path: Path,
 
     # do inference on forced-choice task
     if task_type == 'forced_choice':
-        cross_entropies = predict_forced_choice(model, probing_dataset)
+        cross_entropies = predict_forced_choice(model, probing_dataset, probe_with_mask)
         save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
     # do inference on open_ended task

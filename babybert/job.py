@@ -133,7 +133,8 @@ def main(param2val):
 
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob('*.txt'):
-                    do_probing(save_path, sentences_path, model, tokenizer, step, params.include_punctuation)
+                    do_probing(save_path, sentences_path, model, tokenizer, step,
+                               params.include_punctuation, params.probe_with_mask)
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)
