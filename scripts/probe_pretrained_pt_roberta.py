@@ -125,6 +125,7 @@ if __name__ == '__main__':
             roberta = RobertaModel.from_pretrained(model_name_or_path,
                                                    checkpoint_file=f'{CHECKPOINT_NAME}.pt',
                                                    data_name_or_path=str(architecture_path / 'data-bin'),
+                                                   return_dict=False,  # compatibility with transformers v3
                                                    )
             step = CHECKPOINT_NAME.split('_')[-1]
             models.append(roberta)

@@ -4,8 +4,8 @@ import pandas as pd
 from pathlib import Path
 import torch
 
-from transformers import RobertaTokenizerFast
-from transformers import BertForPreTraining, BertConfig
+from transformers.models.roberta import RobertaTokenizerFast
+from transformers.models.bert import BertForPreTraining, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
@@ -24,7 +24,7 @@ def main(param2val):
 
     #  paths to data
     project_path = Path(param2val['project_path'])
-    data_path_mlm = project_path / 'data' / 'corpora' / f'{params.corpus_name}.txt'
+    data_path = project_path / 'data' / 'corpora' / f'{params.corpus_name}.txt'
 
     # probing path - contains probing sentences
     probing_path = configs.Dirs.probing_sentences
@@ -46,7 +46,7 @@ def main(param2val):
     print(f'Vocab size={tokenizer.vocab_size}')
 
     # load text data
-    sentences = load_sentences_from_file(data_path_mlm,
+    sentences = load_sentences_from_file(data_path,
                                          training_order=params.training_order,
                                          include_punctuation=params.include_punctuation,
                                          allow_discard=True)
