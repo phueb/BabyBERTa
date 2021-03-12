@@ -29,7 +29,7 @@ import logging
 
 from datasets import Dataset, DatasetDict
 
-from transformers.models.roberta import RobertaConfig, RobertaForMaskedLM
+from transformers.models.roberta import RobertaConfig, RobertaForMaskedLM, RobertaTokenizerFast
 from transformers import DataCollatorForLanguageModeling, Trainer, set_seed, TrainingArguments
 
 from babybert.io import load_sentences_from_file
@@ -70,12 +70,9 @@ def main():
         datefmt="%m/%d/%Y %H:%M:%S",
     )
     logger.setLevel(logging.INFO)
-    logger.info("Loading data")
-
-    # Set seed before initializing model.
     set_seed(SEED)
 
-    # load data - inserted by PH
+    logger.info("Loading data")
     data_path = configs.Dirs.corpora / f'{params.corpus_name}.txt'
     sentences = load_sentences_from_file(data_path,
                                          training_order=params.training_order,
@@ -87,26 +84,19 @@ def main():
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
-    # Load pretrained model and tokenizer
-
-    # vocab_fn = 'vocab.json'
-    # merges_fn = 'merges.txt'
-    # tokenizer = RobertaTokenizerFast(vocab_file=str(configs.Dirs.tokenizers / params.bbpe / vocab_fn),
-    #                                  merges_file=str(configs.Dirs.tokenizers / params.bbpe / merges_fn),
-    #                                  add_prefix_space=params.add_prefix_space)
-
-    tokenizer = load_tokenizer(params, configs.Dirs.root)
-    vocab_size = len(tokenizer.get_vocab())
-
-    config = RobertaConfig(vocab_size=vocab_size,
+    logger.info("Loading tokenizer")
+    tokenizer = RobertaTokenizerFast(vocab_file=None,
+                                     merges_file=None,
+                                     tokenizer_file=str(configs.Dirs.tokenizers / f'{params.bbpe}.json'),
+                                     )
+    logger.info("Initialising Roberta from scratch")
+    config = RobertaConfig(vocab_size=tokenizer.vocab_size,
                            hidden_size=params.hidden_size,
                            num_hidden_layers=params.num_layers,
                            num_attention_heads=params.num_attention_heads,
                            intermediate_size=params.intermediate_size,
                            initializer_range=params.initializer_range,
                            )
-
-    logger.info("Initialising Roberta from scratch")
     model = RobertaForMaskedLM(config)
 
     # Preprocessing the datasets.
@@ -116,11 +106,14 @@ def main():
     def tokenize_function(examples):
         # Remove empty lines
         examples["text"] = [line for line in examples["text"] if len(line) > 0 and not line.isspace()]
-
-        # TODO testing
-        return tokenizer.encode(
+        return tokenizer(
             examples["text"],
-            add_special_tokens=True,
+            padding=True,
+            truncation=True,
+            max_length=params.max_num_tokens_in_sequence,
+            # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
+            # receives the `special_tokens_mask`.
+            return_special_tokens_mask=True,
         )
 
     tokenized_datasets = datasets.map(

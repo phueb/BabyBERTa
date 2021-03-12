@@ -8,7 +8,6 @@ from babybert.utils import load_tokenizer
 
 
 MAX_STEP = 160_000
-SCORE_WITH_MASK = False  # true to use pseudo-log likelihoods when scoring sentences in forced choice task
 
 FORCED_CHOICE = False
 OPEN_ENDED = True
