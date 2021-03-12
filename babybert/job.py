@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import torch
 
-from transformers import BertForMaskedLM, BertConfig
+from transformers import RobertaForMaskedLM, RobertaConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
@@ -57,39 +57,22 @@ def main(param2val):
     # BabyBERT
     print('Preparing BabyBERT...')
 
-    # roberta_config = RobertaConfig(vocab_size=vocab_size,
-    #                                pad_token_id=tokenizer.token_to_id(configs.Data.pad_symbol),
-    #                                bos_token_id=tokenizer.token_to_id(configs.Data.bos_symbol),
-    #                                eos_token_id=tokenizer.token_to_id(configs.Data.eos_symbol),
-    #                                return_dict=True,
-    #                                is_decoder=False,
-    #                                is_encoder_decoder=False,
-    #                                add_cross_attention=False,
-    #                                max_position_embeddings=params.max_num_tokens_in_sequence,
-    #                                hidden_size=params.hidden_size,
-    #                                num_hidden_layers=params.num_layers,
-    #                                num_attention_heads=params.num_attention_heads,
-    #                                intermediate_size=params.intermediate_size,
-    #                                initializer_range=params.initializer_range,
-    #                                )
-    # model = RobertaForMaskedLM(config=roberta_config)
-
-    bert_config = BertConfig(vocab_size=vocab_size,
-                             pad_token_id=tokenizer.token_to_id(configs.Data.pad_symbol),
-                             bos_token_id=tokenizer.token_to_id(configs.Data.bos_symbol),
-                             eos_token_id=tokenizer.token_to_id(configs.Data.eos_symbol),
-                             return_dict=True,
-                             is_decoder=False,
-                             is_encoder_decoder=False,
-                             add_cross_attention=False,
-                             max_position_embeddings=params.max_num_tokens_in_sequence,
-                             hidden_size=params.hidden_size,
-                             num_hidden_layers=params.num_layers,
-                             num_attention_heads=params.num_attention_heads,
-                             intermediate_size=params.intermediate_size,
-                             initializer_range=params.initializer_range,
-                             )
-    model = BertForMaskedLM(config=bert_config)  # same as Roberta
+    config = RobertaConfig(vocab_size=vocab_size,
+                           pad_token_id=tokenizer.token_to_id(configs.Data.pad_symbol),
+                           bos_token_id=tokenizer.token_to_id(configs.Data.bos_symbol),
+                           eos_token_id=tokenizer.token_to_id(configs.Data.eos_symbol),
+                           return_dict=True,
+                           is_decoder=False,
+                           is_encoder_decoder=False,
+                           add_cross_attention=False,
+                           # max_position_embeddings=params.max_num_tokens_in_sequence,  # FIXME causes CUDA error
+                           hidden_size=params.hidden_size,
+                           num_hidden_layers=params.num_layers,
+                           num_attention_heads=params.num_attention_heads,
+                           intermediate_size=params.intermediate_size,
+                           initializer_range=params.initializer_range,
+                           )
+    model = RobertaForMaskedLM(config=config)
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 
