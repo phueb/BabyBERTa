@@ -51,7 +51,7 @@ def load_sentences_from_file(file_path: Path,
     print(f'Loading {file_path}', flush=True)
 
     # when lower-casing, do not lower-case upper-cased symbols
-    upper_cased = set(configs.Data.universal_symbols)
+    upper_cased = set(configs.Data.roberta_symbols)
 
     tokenized_sentences = []
     punctuation = {'.', '?', '!'}
@@ -89,10 +89,6 @@ def load_sentences_from_file(file_path: Path,
                 if not include_punctuation:
                     ts = [w for w in ts if w not in punctuation]
 
-                # prevent tokenization of long words into lots of sub-tokens
-                if configs.Data.max_word_length is not None:
-                    ts = [w if len(w) <= configs.Data.max_word_length else configs.Data.long_symbol
-                          for w in ts]
                 tokenized_sentences.append(ts)
 
     if num_too_small:

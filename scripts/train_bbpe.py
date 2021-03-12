@@ -15,12 +15,12 @@ MIN_FREQUENCY = 10  # was 10 before march 11, 2021
 CORPUS_NAMES = ['childes-20201026', 'newsela', 'wiki-20191017-hebb-3M_tokenized']
 ADD_PREFIX_SPACE = True
 
-tokenizer = Tokenizer(BPE(unk_token="<unk>"))
+tokenizer = Tokenizer(BPE(unk_token=configs.Data.unk_symbol))
 tokenizer.pre_tokenizer = ByteLevel(add_prefix_space=ADD_PREFIX_SPACE)
 tokenizer.normalizer = Lowercase()
 
 corpus_file_paths = [str(configs.Dirs.corpora / f'{name}.txt') for name in CORPUS_NAMES]
-trainer = BpeTrainer(special_tokens=configs.Data.universal_symbols + configs.Data.roberta_symbols,
+trainer = BpeTrainer(special_tokens=configs.Data.roberta_symbols,
                      vocab_size=VOCAB_SIZE,
                      min_frequency=MIN_FREQUENCY,
                      )

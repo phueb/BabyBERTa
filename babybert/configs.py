@@ -13,12 +13,13 @@ class Dirs:
 
 class Data:
     min_sentence_length = 3
-    max_word_length = 20  # words with more characters are replaced by <long> symbol
     train_prob = 1.0  # probability that sentence is assigned to train split
-    long_symbol = '<long>'  # this is used in training sentences regardless of the tokenizer of the model
     mask_symbol = '<mask>'
-    universal_symbols = [long_symbol]
-    roberta_symbols = [mask_symbol, '<pad>', '<unk>', '<s>', '</s>']
+    pad_symbol = '<pad>'
+    unk_symbol = '<unk>'
+    bos_symbol = '<s>'
+    eos_symbol = '</s>'
+    roberta_symbols = [mask_symbol, pad_symbol, unk_symbol, bos_symbol, eos_symbol]
 
 
 class Training:

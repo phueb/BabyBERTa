@@ -100,6 +100,6 @@ def load_tokenizer(params,
         pair=None,
         special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
     )
-    tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
+    tokenizer.enable_padding(pad_id=tokenizer.token_to_id(configs.Data.pad_symbol), pad_token=configs.Data.pad_symbol)
     tokenizer.enable_truncation(max_length=params.max_num_tokens_in_sequence)
     return tokenizer
