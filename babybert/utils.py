@@ -90,8 +90,7 @@ def forward_mlm(model,
 def load_tokenizer(params,
                    project_path: Path,
                    ) -> Tokenizer:
-    if params.bbpe == 'gpt2_bpe':
-        raise NotImplementedError
+
     json_fn = f'{params.bbpe}.json'
 
     tokenizer = Tokenizer.from_file(str(project_path / 'data' / 'tokenizers' / json_fn))
