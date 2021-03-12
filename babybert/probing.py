@@ -1,13 +1,13 @@
 from pathlib import Path
-from typing import List, Union
+from typing import List
 import numpy as np
 import attr
 import torch
 from torch.nn import CrossEntropyLoss
 
 from tokenizers import Tokenizer
-from transformers import RobertaForMaskedLM
-from transformers import BertForMaskedLM
+from transformers.models.roberta import RobertaForMaskedLM
+from transformers.models.bert import BertForMaskedLM
 
 from babybert.io import save_yaml_file
 from babybert.utils import make_sequences
@@ -15,7 +15,7 @@ from babybert.dataset import DataSet
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-def predict_open_ended(model: Union[BertForMaskedLM, RobertaForMaskedLM],
+def predict_open_ended(model: RobertaForMaskedLM,
                        dataset: DataSet,
                        ) -> List[str]:
     model.eval()
@@ -26,7 +26,7 @@ def predict_open_ended(model: Union[BertForMaskedLM, RobertaForMaskedLM],
         for x, _, mm in dataset:
             # get logits for all words in batch
             output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
-            logits_3d = output[0].detach()
+            logits_3d = output['logits'].detach()
 
             # get predicted words for masked locations
             logits_for_masked_words = logits_3d[mm]  # 2D index into 3D array -> 2D array [num masks, vocab]
@@ -50,7 +50,7 @@ def predict_open_ended(model: Union[BertForMaskedLM, RobertaForMaskedLM],
     return res
 
 
-def predict_forced_choice(model: Union[BertForMaskedLM, RobertaForMaskedLM],
+def predict_forced_choice(model: RobertaForMaskedLM,
                           dataset: DataSet,
                           score_with_mask: bool,
                           ) -> List[float]:
@@ -65,7 +65,7 @@ def predict_forced_choice(model: Union[BertForMaskedLM, RobertaForMaskedLM],
             if not score_with_mask:
                 # get loss
                 output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
-                logits_3d = output[0]
+                logits_3d = output['logits']
                 logits_for_all_words = logits_3d.permute(0, 2, 1)
                 labels = x.input_ids.cuda()
                 loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
@@ -98,7 +98,7 @@ def predict_forced_choice(model: Union[BertForMaskedLM, RobertaForMaskedLM],
 
 def do_probing(save_path: Path,
                sentences_path: Path,
-               model: Union[BertForMaskedLM, RobertaForMaskedLM],
+               model: RobertaForMaskedLM,
                tokenizer: Tokenizer,
                step: int,
                include_punctuation: bool,

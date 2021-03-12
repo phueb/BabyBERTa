@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import torch
 
-from transformers import RobertaForMaskedLM, RobertaConfig
+from transformers.models.roberta import RobertaForMaskedLM, RobertaConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
@@ -19,7 +19,7 @@ def main(param2val):
 
     import transformers
 
-    assert transformers.__version__ == '3.0.2'
+    assert transformers.__version__ == '4.3.3'
     assert torch.__version__ == '1.6.0+cu101'
 
     # params
@@ -172,4 +172,3 @@ def main(param2val):
     print('Reached end of babybert.job.main', flush=True)
 
     return performance_curves
-

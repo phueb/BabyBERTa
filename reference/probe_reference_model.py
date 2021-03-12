@@ -1,5 +1,5 @@
 
-from transformers import RobertaForMaskedLM
+from transformers.models.roberta import RobertaForMaskedLM
 
 from babybert import configs
 from babybert.params import param2default, Params
