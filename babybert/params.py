@@ -48,6 +48,9 @@ param2default = {
     'num_warmup_steps': 10_000,  # slightly better than 0
     'weight_decay': 0.0,
 
+    # eval
+    'score_with_mask': False,
+
     # model
     'hidden_size': 256,
     'num_layers': 8,
@@ -83,6 +86,9 @@ class Params(object):
     num_epochs = attr.ib(validator=attr.validators.instance_of(int))
     num_warmup_steps = attr.ib(validator=attr.validators.instance_of(int))
     weight_decay = attr.ib(validator=attr.validators.instance_of(float))
+
+    # eval
+    score_with_mask = attr.ib(validator=attr.validators.instance_of(bool))
 
     # model
     num_layers = attr.ib(validator=attr.validators.instance_of(int))

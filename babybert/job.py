@@ -4,8 +4,8 @@ import pandas as pd
 from pathlib import Path
 import torch
 
-from transformers.models.roberta import RobertaTokenizerFast
-from transformers.models.bert import BertForPreTraining, BertConfig
+from transformers import RobertaTokenizerFast
+from transformers import BertForPreTraining, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
@@ -134,7 +134,7 @@ def main(param2val):
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob('*.txt'):
                     do_probing(save_path, sentences_path, model, tokenizer, step,
-                               params.include_punctuation, params.probe_with_mask)
+                               params.include_punctuation, params.score_with_mask)
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)
