@@ -22,7 +22,7 @@ def main(param2val):
 
     import transformers
 
-    assert transformers.__version__ == '4.3.3'
+    assert transformers.__version__ == '3.0.2'
     assert torch.__version__ == '1.6.0+cu101'
 
     # params
@@ -69,7 +69,7 @@ def main(param2val):
 
     # BabyBERT
     print('Preparing BabyBERT...')
-    bert_config = BertConfig(vocab_size=tokenizer.vocab_size,
+    bert_config = BertConfig(vocab_size=vocab_size,
                              hidden_size=params.hidden_size,
                              num_hidden_layers=params.num_layers,
                              num_attention_heads=params.num_attention_heads,
