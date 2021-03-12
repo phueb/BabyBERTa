@@ -15,9 +15,7 @@ param2requests = {
 
 param2debug = {
     'num_mask_patterns': 1,
-    'mask_pattern_size': 1,
     'num_layers': 2,
-    'num_sentences_per_input': 1,
 }
 
 param2default = {
