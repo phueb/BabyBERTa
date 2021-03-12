@@ -13,7 +13,7 @@ from transformers import AdamW, get_linear_schedule_with_warmup
 from babybert import configs
 from babybert.io import load_sentences_from_file
 from babybert.params import Params
-from babybert.utils import split, make_sequences, forward_mlm
+from babybert.utils import split, make_sequences, forward_mlm, load_tokenizer
 from babybert.probing import do_probing
 from babybert.dataset import DataSet
 
@@ -44,18 +44,8 @@ def main(param2val):
     if not save_path.exists():
         save_path.mkdir(parents=True)
 
-    # B-BPE tokenizer - defines input vocabulary
-    if params.bbpe == 'gpt2_bpe':
-        raise NotImplementedError
-    json_fn = f'{params.bbpe}.json'
-    tokenizer = Tokenizer.from_file(str(project_path / 'data' / 'tokenizers' / json_fn))
-    tokenizer.post_processor = TemplateProcessing(
-        single="<s> $A </s>",
-        pair=None,
-        special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
-    )
-    tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
-    tokenizer.enable_truncation(max_length=params.max_num_tokens_in_sequence)
+    # Byte-level BPE tokenizer
+    tokenizer = load_tokenizer(params, project_path)
     vocab_size = len(tokenizer.get_vocab())
     print(f'Vocab size={vocab_size}')
 
@@ -69,6 +59,24 @@ def main(param2val):
 
     # BabyBERT
     print('Preparing BabyBERT...')
+
+    # roberta_config = RobertaConfig(vocab_size=vocab_size,
+    #                                pad_token_id=tokenizer.token_to_id('<pad>'),
+    #                                bos_token_id=tokenizer.token_to_id('<s>'),
+    #                                eos_token_id=tokenizer.token_to_id('</s>'),
+    #                                return_dict=True,
+    #                                is_decoder=False,
+    #                                is_encoder_decoder=False,
+    #                                add_cross_attention=False,
+    #                                max_position_embeddings=params.max_num_tokens_in_sequence,
+    #                                hidden_size=params.hidden_size,
+    #                                num_hidden_layers=params.num_layers,
+    #                                num_attention_heads=params.num_attention_heads,
+    #                                intermediate_size=params.intermediate_size,
+    #                                initializer_range=params.initializer_range,
+    #                                )
+    # model = RobertaForMaskedLM(config=roberta_config)
+
     bert_config = BertConfig(vocab_size=vocab_size,
                              hidden_size=params.hidden_size,
                              num_hidden_layers=params.num_layers,
@@ -176,3 +184,4 @@ def main(param2val):
     print('Reached end of babybert.job.main', flush=True)
 
     return performance_curves
+
