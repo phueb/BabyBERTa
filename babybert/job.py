@@ -4,7 +4,9 @@ import pandas as pd
 from pathlib import Path
 import torch
 
-from transformers import RobertaTokenizerFast
+from tokenizers.processors import TemplateProcessing
+from tokenizers import Tokenizer
+
 from transformers import BertForPreTraining, BertConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
@@ -17,6 +19,11 @@ from babybert.dataset import DataSet
 
 
 def main(param2val):
+
+    import transformers
+
+    assert transformers.__version__ == '4.3.3'
+    assert torch.__version__ == '1.6.0+cu101'
 
     # params
     params = Params.from_param2val(param2val)
@@ -38,12 +45,19 @@ def main(param2val):
         save_path.mkdir(parents=True)
 
     # B-BPE tokenizer - defines input vocabulary
-    vocab_fn = 'vocab_converted.json' if params.bbpe == 'gpt2_bpe' else 'vocab.json'
-    merges_fn = 'merges_converted.txt' if params.bbpe == 'gpt2_bpe' else 'merges.txt'
-    tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / vocab_fn),
-                                     merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / merges_fn),
-                                     add_prefix_space=params.add_prefix_space)
-    print(f'Vocab size={tokenizer.vocab_size}')
+    if params.bbpe == 'gpt2_bpe':
+        raise NotImplementedError
+    json_fn = f'{params.bbpe}.json'
+    tokenizer = Tokenizer.from_file(str(project_path / 'data' / 'tokenizers' / json_fn))
+    tokenizer.post_processor = TemplateProcessing(
+        single="<s> $A </s>",
+        pair=None,
+        special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
+    )
+    tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
+    tokenizer.enable_truncation(max_length=params.max_num_tokens_in_sequence)
+    vocab_size = len(tokenizer.get_vocab())
+    print(f'Vocab size={vocab_size}')
 
     # load text data
     sentences = load_sentences_from_file(data_path,

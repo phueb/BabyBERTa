@@ -4,6 +4,7 @@ from fairseq import utils
 from fairseq.models.roberta.hub_interface import RobertaHubInterface
 from fairseq.models.roberta import RobertaModel
 from fairseq.data.encoders.gpt2_bpe_utils import Encoder
+from fairseq.checkpoint_utils import load_checkpoint_to_cpu
 
 from babybert import configs
 from babybert.io import save_yaml_file
@@ -126,7 +127,11 @@ if __name__ == '__main__':
                                                    checkpoint_file=f'{CHECKPOINT_NAME}.pt',
                                                    data_name_or_path=str(architecture_path / 'data-bin'),
                                                    )
-            step = CHECKPOINT_NAME.split('_')[-1]
+
+            # get step
+            state = load_checkpoint_to_cpu(str(architecture_path / 'checkpoints' / f'{CHECKPOINT_NAME}.pt'))
+            step = state['cfg']['total_num_update']
+
             models.append(roberta)
             steps.append(step)
             names.append(architecture_path.name)
@@ -138,7 +143,7 @@ if __name__ == '__main__':
 
         # check encoder of model
         """
-        to guarantee the correct vocab is loaded, modify cfg in fairseq.fairse.checkpoint_utils by adding:
+        to guarantee the correct vocab is loaded, modify cfg in fairseq.fairseq.checkpoint_utils by adding:
         
         from fairseq.dataclass.utils import overwrite_args_by_name
         new_bpe_cfg = {

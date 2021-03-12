@@ -1,12 +1,11 @@
 from pathlib import Path
-from typing import List
+from typing import List, Union
 import numpy as np
 import attr
-
-from transformers import RobertaTokenizerFast
-
 import torch
 from torch.nn import CrossEntropyLoss
+
+from tokenizers import Tokenizer
 from transformers import BertForPreTraining
 
 from babybert.io import save_yaml_file
@@ -31,10 +30,16 @@ def predict_open_ended(model: BertForPreTraining,
             # get predicted words for masked locations
             logits_for_masked_words = logits_3d[mm]  # 2D index into 3D array -> 2D array [num masks, vocab]
             token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
-            predicted_words = dataset.tokenizer.convert_ids_to_tokens(token_ids)
+            predicted_words = []
+            for i in token_ids:
+                w = dataset.tokenizer.id_to_token(i)
+                if w is None:
+                    raise RuntimeError(f'Did not find token-id={i} in vocab')
+                predicted_words.append(w)
 
             # number of mask symbols should be number of sentences
-            assert len(predicted_words) == len(logits_3d), (len(predicted_words), len(logits_3d))
+            if len(predicted_words) != len(logits_3d):
+                raise ValueError(f' Num predicted words ({len(predicted_words)}) must be num logits ({len(logits_3d)})')
 
             res.extend(predicted_words)
 
@@ -71,7 +76,7 @@ def predict_forced_choice(model: BertForPreTraining,
                 cross_entropies += [loss_i[np.where(row_mask)[0]].mean().item()
                                     for loss_i, row_mask in zip(loss, x.attention_mask.numpy())]
 
-            else: # todo test new probing method
+            else:  # todo test new probing method
 
                 max_token_pos = x.attention_mask.numpy().sum(axis=1).max()
                 print(x.attention_mask.numpy())
@@ -93,10 +98,11 @@ def predict_forced_choice(model: BertForPreTraining,
 def do_probing(save_path: Path,
                sentences_path: Path,
                model: BertForPreTraining,
-               tokenizer: RobertaTokenizerFast,
+               tokenizer: Tokenizer,
                step: int,
                include_punctuation: bool,
                score_with_mask: bool,
+               verbose: bool = False,
                ) -> None:
     model.eval()
 
@@ -131,6 +137,6 @@ def do_probing(save_path: Path,
     elif task_type == 'open_ended':
         predicted_words = predict_open_ended(model, probing_dataset)
         save_open_ended_predictions(sentences, predicted_words, probing_results_path,
-                                    verbose=True if 'dummy' in task_name else False)
+                                    verbose=True if 'dummy' in task_name else verbose)
     else:
         raise AttributeError('Invalid arg to "task_type".')

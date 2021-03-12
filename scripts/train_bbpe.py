@@ -1,32 +1,34 @@
 """
-Train a B-BPE on custom corpora
+Train a ByteLevel-BPE on custom corpora
 """
-from tokenizers import ByteLevelBPETokenizer
-
+from tokenizers import Tokenizer
+from tokenizers.models import BPE
+from tokenizers.pre_tokenizers import ByteLevel
+from tokenizers.trainers import BpeTrainer
+from tokenizers.normalizers import Lowercase
 
 from babybert import configs
 
 
-VOCAB_SIZE = 4096 * 4
-MIN_FREQUENCY = 10
+VOCAB_SIZE = 4096 * 2
+MIN_FREQUENCY = 10  # was 10 before march 11, 2021
 CORPUS_NAMES = ['childes-20201026', 'newsela', 'wiki-20191017-hebb-3M_tokenized']
 ADD_PREFIX_SPACE = True
 
-tokenizer = ByteLevelBPETokenizer(lowercase=configs.Data.lowercase_input,
-                                  add_prefix_space=ADD_PREFIX_SPACE)
+tokenizer = Tokenizer(BPE(unk_token="<unk>"))
+tokenizer.pre_tokenizer = ByteLevel(add_prefix_space=ADD_PREFIX_SPACE)
+tokenizer.normalizer = Lowercase()
+
 corpus_file_paths = [str(configs.Dirs.corpora / f'{name}.txt') for name in CORPUS_NAMES]
-special_tokens = configs.Data.universal_symbols + configs.Data.roberta_symbols
-tokenizer.train(files=corpus_file_paths,
-                vocab_size=VOCAB_SIZE,
-                min_frequency=MIN_FREQUENCY,
-                special_tokens=special_tokens,
-                )
+trainer = BpeTrainer(special_tokens=configs.Data.universal_symbols + configs.Data.roberta_symbols,
+                     vocab_size=VOCAB_SIZE,
+                     min_frequency=MIN_FREQUENCY,
+                     )
+tokenizer.train(corpus_file_paths, trainer)
 
 # save tokenizer
 name = '-'.join([n[0] for n in CORPUS_NAMES]) + '-' + str(VOCAB_SIZE)
-bbpe_path = configs.Dirs.tokenizers / name
-if not bbpe_path.exists():
-    bbpe_path.mkdir(exist_ok=True, parents=True)
-tokenizer.save_model(str(bbpe_path))
+json_path = configs.Dirs.tokenizers / f'{name}.json'
+tokenizer.save(str(json_path))
 
-print(tokenizer)
+print(f'Saved tokenizer config to {json_path}')

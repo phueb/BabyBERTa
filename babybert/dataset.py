@@ -1,12 +1,12 @@
 from typing import List, Tuple, Generator, Union, Optional
 import random
 from itertools import combinations
-
+from tokenizers import Encoding
 
 import numpy as np
 import pyprind
 import torch
-from transformers import RobertaTokenizerFast
+from tokenizers import Tokenizer
 from transformers.modeling_roberta import create_position_ids_from_input_ids
 
 
@@ -32,7 +32,7 @@ class DataSet:
     @classmethod
     def for_probing(cls,
                     sequences: List[str],
-                    tokenizer: RobertaTokenizerFast,
+                    tokenizer: Tokenizer,
                     ):
         """
         returns instance when used for probing.
@@ -41,7 +41,7 @@ class DataSet:
 
         def _get_mask_pattern_from_probing_sequence(sequence: str,
                                                     ) -> Tuple[int]:
-            tokens = tokenizer.tokenize(sequence, add_special_tokens=False)
+            tokens = tokenizer.encode(sequence, add_special_tokens=False).tokens
             res = [i for i, token in enumerate(tokens)
                    if token.endswith(configs.Data.mask_symbol)]
             return tuple(res)
@@ -51,7 +51,7 @@ class DataSet:
 
     def __init__(self,
                  sequences: List[str],
-                 tokenizer: RobertaTokenizerFast,
+                 tokenizer: Tokenizer,
                  params: Union[Params, ProbingParams],
                  data: Optional[List[Tuple[str, Tuple[int]]]] = None,
                  ):
@@ -68,8 +68,9 @@ class DataSet:
         assert 0.0 <= self.params.random_token_prob <= 1.0
 
         # weights for random token replacement
-        weights = np.ones(self.tokenizer.vocab_size)
-        weights[: len(self.tokenizer.all_special_tokens)] = 0
+        weights = np.ones(len(self.tokenizer.get_vocab()))
+        num_special_tokens = 6
+        weights[: num_special_tokens] = 0
         self.weights = weights / weights.sum()
 
         print('Computing tokenized sequence lengths...', flush=True)
@@ -148,7 +149,7 @@ class DataSet:
         num_too_large = 0
         num_tokens_total = 0
         for s in self._sequences:
-            tokens = self.tokenizer.tokenize(s, add_special_tokens=False)
+            tokens = self.tokenizer.encode(s, add_special_tokens=False).tokens
             num_tokens = len(tokens)
 
             # exclude sequence if too many tokens
@@ -215,12 +216,18 @@ class DataSet:
         return res
 
     def mask_input_ids(self,
-                       batch_encoding,
+                       batch_encoding: List[Encoding],
                        mask_patterns: List[Tuple[int]],
                        ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None], torch.tensor], None, None]:
 
-        batch_shape = batch_encoding.data['input_ids'].shape
+        # collect each encoding into a single matrix (not needed before march 11, 2021)
+        input_ids_raw = np.array([e.ids for e in batch_encoding])
+        attention_mask = np.array([e.attention_mask for e in batch_encoding])
+
+        batch_shape = input_ids_raw.shape
         mask = self._make_mask_matrix(batch_shape, mask_patterns)
+
+        assert batch_shape[1] <= self.params.max_num_tokens_in_sequence
 
         # decide unmasking and random replacement
         rand_or_unmask_prob = self.params.random_token_prob + self.params.leave_unmasked_prob
@@ -249,44 +256,30 @@ class DataSet:
         # insert mask symbols - this has no effect during probing
         if np.any(mask_insertion_matrix):
             input_ids = np.where(mask_insertion_matrix,
-                                 self.tokenizer.mask_token_id,
-                                 batch_encoding.data['input_ids'])
+                                 self.tokenizer.token_to_id('<mask>'),
+                                 input_ids_raw)
         else:
-            input_ids = np.copy(batch_encoding.data['input_ids'])
+            input_ids = np.copy(input_ids_raw)
 
         # insert random tokens
         if rand_mask is not None:
             num_rand = rand_mask.sum()
             if num_rand > 0:
-                input_ids[rand_mask] = np.random.choice(self.tokenizer.vocab_size, num_rand, p=self.weights)
+                vocab_size = len(self.tokenizer.get_vocab())
+                input_ids[rand_mask] = np.random.choice(vocab_size, num_rand, p=self.weights)
 
         # x
         x = RobertaInput(input_ids=torch.tensor(input_ids),
-                         attention_mask=torch.tensor(batch_encoding.data['attention_mask']),
-                         position_ids=create_position_ids_from_input_ids(torch.tensor(batch_encoding.data['input_ids']),
-                                                                         self.tokenizer.pad_token_id),
+                         attention_mask=torch.tensor(attention_mask),
+                         position_ids=create_position_ids_from_input_ids(torch.tensor(input_ids_raw),
+                                                                         self.tokenizer.token_to_id('<pad>')),
                          )
 
         # y
         if not mask_patterns:  # forced-choice probing
             y = None
         else:
-            y = torch.tensor(batch_encoding.data['input_ids'][mask]).requires_grad_(False)
-
-        # if self.params.leave_unmasked_prob > 0:
-        #     print('mask')
-        #     print(mask)
-        #     print('unmask')
-        #     print(unmask)
-        #     print('mask_insertion_matrix')
-        #     print(mask_insertion_matrix)
-        #     print('rand_mask')
-        #     print(rand_mask)
-        #     print('input_ids - original')
-        #     print(batch_encoding.data['input_ids'])
-        #     print('input_ids - modified')
-        #     print(input_ids)
-        #     print()
+            y = torch.tensor(input_ids_raw[mask]).requires_grad_(False)
 
         yield x, y, torch.tensor(mask)
 
@@ -305,12 +298,8 @@ class DataSet:
         """
 
         for sequences_in_batch, mask_patterns in self._gen_data_chunks():
-            
-            batch_encoding = self.tokenizer.batch_encode_plus(sequences_in_batch,
-                                                              is_pretokenized=False,
-                                                              max_length=self.params.max_num_tokens_in_sequence,
-                                                              padding=True,
-                                                              truncation=True,
-                                                              return_tensors='np')
-            
+
+            # before march 11, encoding returned numpy arrays
+            batch_encoding: List[Encoding] = self.tokenizer.encode_batch(sequences_in_batch)
+
             yield from self.mask_input_ids(batch_encoding, mask_patterns)

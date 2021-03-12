@@ -83,9 +83,8 @@ def load_sentences_from_file(file_path: Path,
                     continue
 
                 # lower-case
-                if configs.Data.lowercase_input:
-                    ts = [w if w in upper_cased else w.lower()
-                          for w in ts]
+                ts = [w if w in upper_cased else w.lower()
+                      for w in ts]
 
                 if not include_punctuation:
                     ts = [w for w in ts if w not in punctuation]
