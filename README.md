@@ -2,14 +2,12 @@
  <img src="images/logo.png" width="250"> 
 </div>
 
-## Background
+## About
 
-This repository contains research code that compares syntactic abilities of BERT trained on 
-a small cognitively plausible corpus of child-directed speech (5M words from American-English CHILDES) 
-to that trained on a large (standard) adult-generated text.
+This repository contains research code for testing a small RoBERTA model trained on 
+a small corpus of child-directed speech (5M words from American-English CHILDES).
+Our model is implemented using the `transformers` Python package, maintained by `huggingface`.
 
-The code is for research purpose only. 
-The goal of this research project is to understand language acquisition from the point of view of distributional learning models.
 
 ## History
 
@@ -18,16 +16,16 @@ whose published work is available [here](https://www.aclweb.org/anthology/W08-21
 Having found little benefit for joint SRL and MLM training of a custom (smaller in size) version of BERT,
  a new line of research into BERT's acquisition of syntactic knowledge began. 
 - 2020 (Fall): We discovered that a cognitively more plausible MLM pre-training strategy for a small BERT-like transformer outperformed an identically sized RoBERTa model, trained with standard methods in the `fairseq` library, on a large number of number agreement tasks. 
-- 2021 (Spring): We are curently investigating which modifications of pre-training are most useful for acquiring syntactic knowledge in the small-model and small-data setting for Transformer language models.
+- 2021 (Spring): We are currently investigating which modifications of pre-training are most useful for acquiring syntactic knowledge in the small-model and small-data setting for Transformer language models.
  
 ## Probing for syntactic knowledge
 
 Probing data can be found [here](https://github.com/phueb/Zorro). 
 
 
-## BabyBERT vs. BERT
+## BabyBERT vs. RoBERTa
  
-BabyBERT is inspired by the original BERT model, but departs from it in many ways.
+BabyBERT is inspired by the original RoBERTa model, but departs from it in many ways.
  
 Because our goal is to work with a compact model, optimized for acquiring distributional knowledge about child-directed speech,
  rather than some down-stream application, BabyBERT differs from the original BERT in the following ways:
@@ -35,26 +33,20 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - trained on American-English child-directed speech: ~5M words vs ~2B words 
 - fewer hidden units and layers: ~10M parameters vs ~100M
 - smaller vocabulary: ~8K vs ~30K
-- Byte-Pair BPE tokenization (as in RoBERTa)
-- no next-sentence prediction objective (as in RoBERTa)
-- the same masking pattern is never applied to the same sequence (more similar but not identical to RoBERTa)
-- only 2 tokens per sequence are masked, instead of masking each token with probability of 0.15
 - masked locations are never replaced by the original or a random word
 - smaller batch size: 16 vs. 256
-- each epoch guarantees that all examples in the training data has been seen
-- only 1 complete pass through training data: 1 epoch vs. ~40 epochs
+- fewer training steps: 160K steps (approx 5-6 epochs) vs. many more in the original RoBERTa
 - training examples are ordered by the age of the child to whom the utterance is directed to
-- sequences consist of 1 utterance/sentence, as opposed to a pair of segments containing multiple sentences
-- L2 weight decay of 0.00 instead of 0.01
+- input sequences consist of 1 utterance, as opposed to multiple sentences
 
-The last point is extremely important for achieving good performance on our number agreement tasks specifically made for CHILDES.
-To achieve above-chance performance on number agreement, the model must not be trained with more than 1 utterance per input.
+To achieve good performance on our number agreement tasks, 
+we observed the model must not be trained with more than 1 utterance per input.
+This observation hold for the CHILDES corpus, but not for other corpora.
 
 ## BabyBERT vs. fairseq RoBERTa
 To train a BabyBERT like model using `fairseq`, make sure to use the following command line arguments: 
 
 ```bash
---fp32
 --batch-size 16
 --clip-norm 1.0
 --adam-betas '(0.9, 0.999)'
@@ -64,16 +56,21 @@ To train a BabyBERT like model using `fairseq`, make sure to use the following c
 --sample-break-mode eos  # one complete sentece per sample
 ```
 
+There are additional subtle differences between `huggingface` and `fairseq` that prevented us from replicating our results in `fairseq`.
+Potential differences include:
+* weight initialisation
+* floating point precision
+* pre-processing (e.g. tokenization)
+
 ## Pre-processing Pipeline
 
 1. Raw text data, in `txt` files, was previously tokenized using `spacy` which splits on contractions.
 2. Sentences are separated and those that are too short or too long are excluded.
 3. Multiple sentences may be combined (but default is 1) into a single sequence.
 4. Each sequence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.
-5. One BBPE (sub-)token per sequence is masked.
-6. Multiple sequences are batched together (default is 16).
-7. Each batch of sequences is input to BBPE Tokenizer `batch_encode_plus()` method, 
-which produces output compatible with the `forward()` method of BabyBERT (a `transfomers.BertModel`)
+5. Multiple sequences are batched together (default is 16).
+6. Each batch of sequences is input to a custom trained `tokenizers` BBPE Tokenizer, 
+which produces output compatible with the `forward()` method of BabyBERT.
 
 
 ## Using the BabyBERT vocab
@@ -105,7 +102,7 @@ for token in encoder.bpe.re.findall(encoder.bpe.pat, text):
 print(bpe_tokens)
 ```
 
-## Running multiple simulations at the same time
+## Running multiple jobs simultaneously
 
 ### Dependencies
 
@@ -131,4 +128,4 @@ Then, type the following into the terminal:
 
 ## Compatibility
 
-Tested on Ubuntu 18.04, Python 3.7, transformers=3.02, and torch==1.2.0
+Tested on Ubuntu 18.04, Python 3.7

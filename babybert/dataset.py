@@ -1,13 +1,12 @@
 from typing import List, Tuple, Generator, Union, Optional
 import random
 from itertools import combinations
-from tokenizers import Encoding
-
 import numpy as np
 import pyprind
 import torch
+
+from tokenizers import Encoding
 from tokenizers import Tokenizer
-from transformers.models.roberta.modeling_roberta import create_position_ids_from_input_ids
 
 
 from babybert import configs
@@ -271,8 +270,6 @@ class DataSet:
         # x
         x = RobertaInput(input_ids=torch.tensor(input_ids),
                          attention_mask=torch.tensor(attention_mask),
-                         position_ids=create_position_ids_from_input_ids(torch.tensor(input_ids_raw),
-                                                                         self.tokenizer.token_to_id(configs.Data.pad_symbol)),
                          )
 
         # y

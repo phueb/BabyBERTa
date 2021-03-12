@@ -1,12 +1,13 @@
 import random
 import torch
-from tokenizers import Tokenizer
-from tokenizers.processors import TemplateProcessing
 from torch.nn import CrossEntropyLoss
 from typing import Tuple, List
 import attr
 from itertools import islice
 from pathlib import Path
+
+from tokenizers import Tokenizer
+from tokenizers.processors import TemplateProcessing
 
 from babybert import configs
 
@@ -18,7 +19,6 @@ loss_fct = CrossEntropyLoss()
 class RobertaInput:
     input_ids: torch.tensor = attr.ib()
     attention_mask: torch.tensor = attr.ib()
-    position_ids: torch.tensor = attr.ib()
 
 
 def make_sequences(sentences: List[str],
