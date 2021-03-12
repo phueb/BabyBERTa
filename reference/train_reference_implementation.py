@@ -28,8 +28,9 @@ https://huggingface.co/models?filter=masked-lm
 import logging
 
 from datasets import Dataset, DatasetDict
+from tokenizers import Tokenizer
 
-from transformers.models.roberta import RobertaTokenizerFast, RobertaConfig, RobertaForMaskedLM
+from transformers.models.roberta import RobertaConfig, RobertaForMaskedLM
 from transformers import DataCollatorForLanguageModeling, Trainer, set_seed, TrainingArguments
 
 from babybert.io import load_sentences_from_file
@@ -38,10 +39,7 @@ from babybert import configs
 from babybert.params import param2default, Params
 
 
-LINE_BY_LINE = True  # TODO interesting to evaluate model performance when this is False
-num_sentences_per_input = 1
-SEED = 0
-MAX_SEQ_LENGTH = 256
+SEED = 1
 preprocessing_num_workers = 4
 
 
@@ -59,6 +57,7 @@ training_args = TrainingArguments(
     max_steps=160_000,
     warmup_steps=10_000,
     seed=SEED,
+    save_steps=40_000,
 )
 
 logger = logging.getLogger(__name__)
@@ -83,14 +82,31 @@ def main():
                                          training_order=params.training_order,
                                          include_punctuation=params.include_punctuation,
                                          allow_discard=True)
-    data_in_dict = {'text': make_sequences(sentences, num_sentences_per_input)}
+    data_in_dict = {'text': make_sequences(sentences, params.num_sentences_per_input)}
     datasets = DatasetDict({'train': Dataset.from_dict(data_in_dict)})
+    print(datasets['train'])
     # See more about loading any type of standard or custom dataset (from files, python dict, pandas DataFrame, etc) at
     # https://huggingface.co/docs/datasets/loading_datasets.html.
 
     # Load pretrained model and tokenizer
-    config = RobertaConfig.from_pretrained('config.json')
-    tokenizer = RobertaTokenizerFast.from_pretrained(configs.Dirs.tokenizers / params.bbpe)
+
+    # TODO maybe special tokens like mask or pad are expected to have a specific id?
+    vocab_fn = 'vocab.json'
+    merges_fn = 'merges.txt'
+    tokenizer = RobertaTokenizerFast(vocab_file=str(configs.Dirs.tokenizers / params.bbpe / vocab_fn),
+                                     merges_file=str(configs.Dirs.tokenizers / params.bbpe / merges_fn),
+                                     add_prefix_space=params.add_prefix_space)
+
+    print(tokenizer.tokenize('the dog on the <mask> .', add_special_tokens=False))
+    raise SystemExit
+
+    config = RobertaConfig(vocab_size=tokenizer.vocab_size,
+                           hidden_size=params.hidden_size,
+                           num_hidden_layers=params.num_layers,
+                           num_attention_heads=params.num_attention_heads,
+                           intermediate_size=params.intermediate_size,
+                           initializer_range=params.initializer_range,
+                           )
 
     logger.info("Initialising Roberta from scratch")
     model = RobertaForMaskedLM(config)
@@ -101,88 +117,39 @@ def main():
     column_names = datasets["train"].column_names
     text_column_name = "text"
 
-    if MAX_SEQ_LENGTH > tokenizer.model_max_length:
-        logger.warn(
-            f"The max_seq_length passed ({MAX_SEQ_LENGTH}) is larger than the maximum length for the"
+    if params.max_num_tokens_in_sequence > tokenizer.model_max_length:
+        logger.warning(
+            f"The max_seq_length passed ({params.max_num_tokens_in_sequence}) is larger than the maximum length for the"
             f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
         )
-    max_seq_length = min(MAX_SEQ_LENGTH, tokenizer.model_max_length)
 
-    if LINE_BY_LINE:
-        # When using line_by_line, we just tokenize each nonempty line.
-
-        def tokenize_function(examples):
-            # Remove empty lines
-            examples["text"] = [line for line in examples["text"] if len(line) > 0 and not line.isspace()]
-            return tokenizer(
-                examples["text"],
-                padding=True,
-                truncation=True,
-                max_length=max_seq_length,
-                # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
-                # receives the `special_tokens_mask`.
-                return_special_tokens_mask=True,
-            )
-
-        tokenized_datasets = datasets.map(
-            tokenize_function,
-            batched=True,
-            num_proc=preprocessing_num_workers,
-            remove_columns=[text_column_name],
-            load_from_cache_file=False,
-        )
-    else:
-        # Otherwise, we tokenize every text, then concatenate them together before splitting them in smaller parts.
-        # We use `return_special_tokens_mask=True` because DataCollatorForLanguageModeling (see below) is more
-        # efficient when it receives the `special_tokens_mask`.
-        def tokenize_function(examples):
-            return tokenizer(examples[text_column_name], return_special_tokens_mask=True)
-
-        tokenized_datasets = datasets.map(
-            tokenize_function,
-            batched=True,
-            num_proc=preprocessing_num_workers,
-            remove_columns=column_names,
-            load_from_cache_file=False,
+    def tokenize_function(examples):
+        # Remove empty lines
+        examples["text"] = [line for line in examples["text"] if len(line) > 0 and not line.isspace()]
+        return tokenizer(
+            examples["text"],
+            padding=True,
+            truncation=True,
+            max_length=params.max_num_tokens_in_sequence,
+            # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
+            # receives the `special_tokens_mask`.
+            return_special_tokens_mask=True,
         )
 
-        # Main data processing function that will concatenate all texts from our dataset and generate chunks of
-        # max_seq_length.
-        def group_texts(examples):
-            # Concatenate all texts.
-            concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
-            total_length = len(concatenated_examples[list(examples.keys())[0]])
-            # We drop the small remainder, we could add padding if the model supported it instead of this drop, you can
-            # customize this part to your needs.
-            total_length = (total_length // max_seq_length) * max_seq_length
-            # Split by chunks of max_len.
-            result = {
-                k: [t[i : i + max_seq_length] for i in range(0, total_length, max_seq_length)]
-                for k, t in concatenated_examples.items()
-            }
-            return result
+    tokenized_datasets = datasets.map(
+        tokenize_function,
+        batched=True,
+        num_proc=preprocessing_num_workers,
+        remove_columns=[text_column_name],
+        load_from_cache_file=False,
+    )
 
-        # Note that with `batched=True`, this map processes 1,000 texts together, so group_texts throws away a
-        # remainder for each of those groups of 1,000 texts. You can adjust that batch_size here but a higher value
-        # might be slower to preprocess.
-        #
-        # To speed up this part, we use multiprocessing. See the documentation of the map method for more information:
-        # https://huggingface.co/docs/datasets/package_reference/main_classes.html#datasets.Dataset.map
-
-        tokenized_datasets = tokenized_datasets.map(
-            group_texts,
-            batched=True,
-            num_proc=preprocessing_num_workers,
-            load_from_cache_file=False,
-        )
-
-    if "train" not in tokenized_datasets:
-        raise ValueError("--do_train requires a train dataset")
     train_dataset = tokenized_datasets["train"]
+    print(f'Length of train data={len(train_dataset)}')
 
-    # Data collator
-    # This one will take care of randomly masking the tokens.
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm_probability=0.15)
+    # Data collator will take care of randomly masking the tokens.
+    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer,
+                                                    mlm_probability=params.mask_probability)
 
     # Initialize our Trainer
     trainer = Trainer(
@@ -197,9 +164,6 @@ def main():
     # Training
     train_result = trainer.train()
     trainer.save_model()  # Saves the tokenizer too for easy upload
-
-    metrics = train_result.metrics
-    metrics["train_samples"] = len(train_dataset)
 
 
 if __name__ == "__main__":

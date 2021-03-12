@@ -5,13 +5,11 @@ param2requests = {
     'corpus_name': ['newsela'],
 
 
-    'probabilistic_masking': [True],
-    'mask_probability': [0.05, 0.5, 0.15, 0.25, 0.75],  # todo test
+    # uncomment, in order to run configuration close as possible to reference roberta
+    'leave_unmasked_prob': [0.1, 0.0],
+    'random_token_prob': [0.1, 0.0],
 
-    # 'hidden_size': [768],
-    # 'num_layers': [12],
-    # 'num_attention_heads': [12],
-    # 'intermediate_size': [1024],
+
 }
 
 
@@ -30,13 +28,13 @@ param2default = {
     'include_punctuation': True,
     'allow_truncated_sentences': False,
     'training_order': 'none',  # 'age-ordered' is better for CHILDES data - must use with consecutive_masking=True
-    'num_mask_patterns': 6,  # 6 is better than lower or higher
-    'mask_pattern_size': 2,  # 2 is better than 1 and as good as 3
-    'probabilistic_masking': False,
+    'num_mask_patterns': 6,  # 6 is better than lower or
+    'mask_pattern_size': 2,  # used only if probabilistic_masking = False
+    'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
     'leave_unmasked_prob': 0.0,
     'random_token_prob': 0.0,
-    'corpus_name': 'childes-20201026',
+    'corpus_name': 'newsela',
     'bbpe': 'c-n-w-8192',  # larger than 8k slightly reduces performance
     'add_prefix_space': True,  # better if True, whether to treat first token like any other token (False in GPT-2)
     'max_num_tokens_in_sequence': 128,  # unacceptable performance if lower than ~32
@@ -47,6 +45,9 @@ param2default = {
     'num_epochs': 1,
     'num_warmup_steps': 10_000,  # slightly better than 0
     'weight_decay': 0.0,
+
+    # eval
+    'score_with_mask': False,  # True to use pseudo-log-likelihoods when probing with forced-choice task, BLIMP style
 
     # model
     'hidden_size': 256,
@@ -83,6 +84,9 @@ class Params(object):
     num_epochs = attr.ib(validator=attr.validators.instance_of(int))
     num_warmup_steps = attr.ib(validator=attr.validators.instance_of(int))
     weight_decay = attr.ib(validator=attr.validators.instance_of(float))
+
+    # eval
+    score_with_mask = attr.ib(validator=attr.validators.instance_of(bool))
 
     # model
     num_layers = attr.ib(validator=attr.validators.instance_of(int))

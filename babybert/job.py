@@ -4,8 +4,10 @@ import pandas as pd
 from pathlib import Path
 import torch
 
-from transformers.models.roberta import RobertaTokenizerFast
-from transformers.models.bert import BertForPreTraining, BertConfig
+from tokenizers.processors import TemplateProcessing
+from tokenizers import Tokenizer
+
+from transformers.models.roberta import RobertaForMaskedLM, RobertaConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babybert import configs
@@ -17,6 +19,11 @@ from babybert.dataset import DataSet
 
 
 def main(param2val):
+
+    import transformers
+
+    assert transformers.__version__ == '4.3.3'
+    assert torch.__version__ == '1.6.0+cu101'
 
     # params
     params = Params.from_param2val(param2val)
@@ -38,12 +45,19 @@ def main(param2val):
         save_path.mkdir(parents=True)
 
     # B-BPE tokenizer - defines input vocabulary
-    vocab_fn = 'vocab_converted.json' if params.bbpe == 'gpt2_bpe' else 'vocab.json'
-    merges_fn = 'merges_converted.txt' if params.bbpe == 'gpt2_bpe' else 'merges.txt'
-    tokenizer = RobertaTokenizerFast(vocab_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / vocab_fn),
-                                     merges_file=str(project_path / 'data' / 'tokenizers' / params.bbpe / merges_fn),
-                                     add_prefix_space=params.add_prefix_space)
-    print(f'Vocab size={tokenizer.vocab_size}')
+    if params.bbpe == 'gpt2_bpe':
+        raise NotImplementedError
+    json_fn = f'{params.bbpe}.json'
+    tokenizer = Tokenizer.from_file(str(project_path / 'data' / 'tokenizers' / json_fn))
+    tokenizer.post_processor = TemplateProcessing(
+        single="<s> $A </s>",
+        pair=None,
+        special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
+    )
+    tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
+    tokenizer.enable_truncation(max_length=params.max_num_tokens_in_sequence)
+    vocab_size = len(tokenizer.get_vocab())
+    print(f'Vocab size={vocab_size}')
 
     # load text data
     sentences = load_sentences_from_file(data_path,
@@ -55,14 +69,23 @@ def main(param2val):
 
     # BabyBERT
     print('Preparing BabyBERT...')
-    bert_config = BertConfig(vocab_size=tokenizer.vocab_size,
-                             hidden_size=params.hidden_size,
-                             num_hidden_layers=params.num_layers,
-                             num_attention_heads=params.num_attention_heads,
-                             intermediate_size=params.intermediate_size,
-                             initializer_range=params.initializer_range,
-                             )
-    model = BertForPreTraining(config=bert_config)  # same as Roberta
+    roberta_config = RobertaConfig(vocab_size=vocab_size,
+                                   pad_token_id=tokenizer.token_to_id('<pad>'),
+                                   bos_token_id=tokenizer.token_to_id('<s>'),
+                                   eos_token_id=tokenizer.token_to_id('</s>'),
+                                   return_dict=True,
+                                   is_decoder=False,
+                                   is_encoder_decoder=False,
+                                   add_cross_attention=False,
+                                   max_position_embeddings=params.max_num_tokens_in_sequence,
+                                   hidden_size=params.hidden_size,
+                                   num_hidden_layers=params.num_layers,
+                                   num_attention_heads=params.num_attention_heads,
+                                   intermediate_size=params.intermediate_size,
+                                   initializer_range=params.initializer_range,
+                                   )
+    model = RobertaForMaskedLM(config=roberta_config)
+
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 
@@ -134,7 +157,7 @@ def main(param2val):
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob('*.txt'):
                     do_probing(save_path, sentences_path, model, tokenizer, step,
-                               params.include_punctuation, params.probe_with_mask)
+                               params.include_punctuation, params.score_with_mask)
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)
