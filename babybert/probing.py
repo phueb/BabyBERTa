@@ -6,7 +6,8 @@ import torch
 from torch.nn import CrossEntropyLoss
 
 from tokenizers import Tokenizer
-from transformers import BertForPreTraining
+from transformers import RobertaForMaskedLM
+from transformers import BertForMaskedLM
 
 from babybert.io import save_yaml_file
 from babybert.utils import make_sequences
@@ -14,7 +15,7 @@ from babybert.dataset import DataSet
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
-def predict_open_ended(model: BertForPreTraining,
+def predict_open_ended(model: Union[BertForMaskedLM, RobertaForMaskedLM],
                        dataset: DataSet,
                        ) -> List[str]:
     model.eval()
@@ -49,7 +50,7 @@ def predict_open_ended(model: BertForPreTraining,
     return res
 
 
-def predict_forced_choice(model: BertForPreTraining,
+def predict_forced_choice(model: Union[BertForMaskedLM, RobertaForMaskedLM],
                           dataset: DataSet,
                           score_with_mask: bool,
                           ) -> List[float]:
@@ -97,7 +98,7 @@ def predict_forced_choice(model: BertForPreTraining,
 
 def do_probing(save_path: Path,
                sentences_path: Path,
-               model: BertForPreTraining,
+               model: Union[BertForMaskedLM, RobertaForMaskedLM],
                tokenizer: Tokenizer,
                step: int,
                include_punctuation: bool,
