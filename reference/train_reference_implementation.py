@@ -28,7 +28,6 @@ https://huggingface.co/models?filter=masked-lm
 import logging
 
 from datasets import Dataset, DatasetDict
-from tokenizers import Tokenizer
 
 from transformers.models.roberta import RobertaConfig, RobertaForMaskedLM
 from transformers import DataCollatorForLanguageModeling, Trainer, set_seed, TrainingArguments
@@ -37,6 +36,7 @@ from babybert.io import load_sentences_from_file
 from babybert.utils import make_sequences
 from babybert import configs
 from babybert.params import param2default, Params
+from babybert.utils import load_tokenizer
 
 
 SEED = 1
@@ -53,7 +53,6 @@ training_args = TrainingArguments(
     do_predict=False,
     per_device_train_batch_size=params.batch_size,
     learning_rate=params.lr,
-    evaluation_strategy='no',
     max_steps=160_000,
     warmup_steps=10_000,
     seed=SEED,
@@ -90,14 +89,15 @@ def main():
 
     # Load pretrained model and tokenizer
 
-    # TODO maybe special tokens like mask or pad are expected to have a specific id?
-    vocab_fn = 'vocab.json'
-    merges_fn = 'merges.txt'
-    tokenizer = RobertaTokenizerFast(vocab_file=str(configs.Dirs.tokenizers / params.bbpe / vocab_fn),
-                                     merges_file=str(configs.Dirs.tokenizers / params.bbpe / merges_fn),
-                                     add_prefix_space=params.add_prefix_space)
+    # vocab_fn = 'vocab.json'
+    # merges_fn = 'merges.txt'
+    # tokenizer = RobertaTokenizerFast(vocab_file=str(configs.Dirs.tokenizers / params.bbpe / vocab_fn),
+    #                                  merges_file=str(configs.Dirs.tokenizers / params.bbpe / merges_fn),
+    #                                  add_prefix_space=params.add_prefix_space)
 
-    print(tokenizer.tokenize('the dog on the <mask> .', add_special_tokens=False))
+    tokenizer = load_tokenizer(params, configs.Dirs.root)
+
+    print(tokenizer.encode('the dog on the <mask> .', add_special_tokens=False).tokens)
     raise SystemExit
 
     config = RobertaConfig(vocab_size=tokenizer.vocab_size,
@@ -126,14 +126,11 @@ def main():
     def tokenize_function(examples):
         # Remove empty lines
         examples["text"] = [line for line in examples["text"] if len(line) > 0 and not line.isspace()]
-        return tokenizer(
+
+        # TODO testing
+        return tokenizer.encode(
             examples["text"],
-            padding=True,
-            truncation=True,
-            max_length=params.max_num_tokens_in_sequence,
-            # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
-            # receives the `special_tokens_mask`.
-            return_special_tokens_mask=True,
+            add_special_tokens=True,
         )
 
     tokenized_datasets = datasets.map(

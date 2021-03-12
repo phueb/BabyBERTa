@@ -12,9 +12,7 @@ class Dirs:
 
 
 class Data:
-    lowercase_input = True
     min_sentence_length = 3
-    max_sentence_length = 30  # must work for all corpora. before sub-tokenization and concatenation of sentences
     max_word_length = 20  # words with more characters are replaced by <long> symbol
     train_prob = 1.0  # probability that sentence is assigned to train split
     long_symbol = '<long>'  # this is used in training sentences regardless of the tokenizer of the model

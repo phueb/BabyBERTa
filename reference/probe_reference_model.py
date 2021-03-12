@@ -4,6 +4,7 @@ from transformers.models.roberta import RobertaForMaskedLM, RobertaTokenizerFast
 from babybert import configs
 from babybert.params import param2default, Params
 from babybert.probing import do_probing
+from babybert.utils import load_tokenizer
 
 
 MAX_STEP = 160_000
@@ -27,11 +28,7 @@ if __name__ == '__main__':
     roberta.cuda(0)
 
     print('Loading tokenizer')
-    vocab_fn = 'vocab.json'
-    merges_fn = 'merges.txt'
-    tokenizer = RobertaTokenizerFast(vocab_file=str(configs.Dirs.tokenizers / params.bbpe / vocab_fn),
-                                     merges_file=str(configs.Dirs.tokenizers / params.bbpe / merges_fn),
-                                     add_prefix_space=params.add_prefix_space)
+    tokenizer = load_tokenizer(params, configs.Dirs.root)
 
     architecture_name = 'reference_roberta'
     step = MAX_STEP

@@ -7,8 +7,6 @@ from tokenizers.pre_tokenizers import ByteLevel
 from tokenizers.trainers import BpeTrainer
 from tokenizers.normalizers import Lowercase
 
-from transformers.models.roberta import RobertaTokenizerFast
-
 from babybert import configs
 
 
@@ -34,6 +32,3 @@ json_path = configs.Dirs.tokenizers / f'{name}.json'
 tokenizer.save(str(json_path))
 
 print(f'Saved tokenizer config to {json_path}')
-
-t = RobertaTokenizerFast.from_pretrained(str(json_path.parent))
-print(t)

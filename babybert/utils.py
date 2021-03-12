@@ -1,9 +1,12 @@
 import random
 import torch
+from tokenizers import Tokenizer
+from tokenizers.processors import TemplateProcessing
 from torch.nn import CrossEntropyLoss
 from typing import Tuple, List
 import attr
 from itertools import islice
+from pathlib import Path
 
 from babybert import configs
 
@@ -82,3 +85,21 @@ def forward_mlm(model,
                     labels)  # [num masks in batch]
 
     return loss
+
+
+def load_tokenizer(params,
+                   project_path: Path,
+                   ) -> Tokenizer:
+    if params.bbpe == 'gpt2_bpe':
+        raise NotImplementedError
+    json_fn = f'{params.bbpe}.json'
+
+    tokenizer = Tokenizer.from_file(str(project_path / 'data' / 'tokenizers' / json_fn))
+    tokenizer.post_processor = TemplateProcessing(
+        single="<s> $A </s>",
+        pair=None,
+        special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
+    )
+    tokenizer.enable_padding(pad_id=tokenizer.token_to_id('<pad>'), pad_token='<pad>')
+    tokenizer.enable_truncation(max_length=params.max_num_tokens_in_sequence)
+    return tokenizer
