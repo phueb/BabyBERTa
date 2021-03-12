@@ -256,7 +256,7 @@ class DataSet:
         # insert mask symbols - this has no effect during probing
         if np.any(mask_insertion_matrix):
             input_ids = np.where(mask_insertion_matrix,
-                                 self.tokenizer.token_to_id('<mask>'),
+                                 self.tokenizer.token_to_id(configs.Data.mask_symbol),
                                  input_ids_raw)
         else:
             input_ids = np.copy(input_ids_raw)
@@ -272,7 +272,7 @@ class DataSet:
         x = RobertaInput(input_ids=torch.tensor(input_ids),
                          attention_mask=torch.tensor(attention_mask),
                          position_ids=create_position_ids_from_input_ids(torch.tensor(input_ids_raw),
-                                                                         self.tokenizer.token_to_id('<pad>')),
+                                                                         self.tokenizer.token_to_id(configs.Data.pad_symbol)),
                          )
 
         # y

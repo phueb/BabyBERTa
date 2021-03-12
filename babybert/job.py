@@ -58,9 +58,9 @@ def main(param2val):
     print('Preparing BabyBERT...')
 
     # roberta_config = RobertaConfig(vocab_size=vocab_size,
-    #                                pad_token_id=tokenizer.token_to_id('<pad>'),
-    #                                bos_token_id=tokenizer.token_to_id('<s>'),
-    #                                eos_token_id=tokenizer.token_to_id('</s>'),
+    #                                pad_token_id=tokenizer.token_to_id(configs.Data.pad_symbol),
+    #                                bos_token_id=tokenizer.token_to_id(configs.Data.bos_symbol),
+    #                                eos_token_id=tokenizer.token_to_id(configs.Data.eos_symbol),
     #                                return_dict=True,
     #                                is_decoder=False,
     #                                is_encoder_decoder=False,
