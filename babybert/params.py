@@ -2,12 +2,13 @@ import attr
 
 param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
-    'corpus_name': ['newsela'],
+
+    'layer_norm_eps': [1e-5, 1e-12]
 
 
     # uncomment, in order to run configuration close as possible to reference roberta
-    'leave_unmasked_prob': [0.1, 0.0],
-    'random_token_prob': [0.1, 0.0],
+    # 'leave_unmasked_prob': [0.1, 0.0],
+    # 'random_token_prob': [0.1, 0.0],
 
 
 }
@@ -53,6 +54,7 @@ param2default = {
     'num_attention_heads': 8,
     'intermediate_size': 1024,
     'initializer_range': 0.02,  # stdev of trunc normal for initializing all weights
+    'layer_norm_eps': 1e-5,  # 1e-5 used in fariseq, but 1e-12 used in hgugingface
 }
 
 
@@ -92,6 +94,7 @@ class Params(object):
     num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
     intermediate_size = attr.ib(validator=attr.validators.instance_of(int))
     initializer_range = attr.ib(validator=attr.validators.instance_of(float))
+    layer_norm_eps = attr.ib(validator=attr.validators.instance_of(float))
 
     @classmethod
     def from_param2val(cls, param2val):

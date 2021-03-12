@@ -65,7 +65,8 @@ def main(param2val):
                            is_decoder=False,
                            is_encoder_decoder=False,
                            add_cross_attention=False,
-                           # max_position_embeddings=params.max_num_tokens_in_sequence,  # FIXME causes CUDA error
+                           layer_norm_eps=params.layer_norm_eps,  # TODO test 1e-5 used in fairseq
+                           max_position_embeddings=params.max_num_tokens_in_sequence + 2,
                            hidden_size=params.hidden_size,
                            num_hidden_layers=params.num_layers,
                            num_attention_heads=params.num_attention_heads,

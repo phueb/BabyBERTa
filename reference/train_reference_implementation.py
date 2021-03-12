@@ -54,7 +54,7 @@ training_args = TrainingArguments(
     per_device_train_batch_size=params.batch_size,
     learning_rate=params.lr,
     max_steps=160_000,
-    warmup_steps=10_000,
+    warmup_steps=params.num_warmup_steps,
     seed=SEED,
     save_steps=40_000,
 )
@@ -96,11 +96,9 @@ def main():
     #                                  add_prefix_space=params.add_prefix_space)
 
     tokenizer = load_tokenizer(params, configs.Dirs.root)
+    vocab_size = len(tokenizer.get_vocab())
 
-    print(tokenizer.encode('the dog on the <mask> .', add_special_tokens=False).tokens)
-    raise SystemExit
-
-    config = RobertaConfig(vocab_size=tokenizer.vocab_size,
+    config = RobertaConfig(vocab_size=vocab_size,
                            hidden_size=params.hidden_size,
                            num_hidden_layers=params.num_layers,
                            num_attention_heads=params.num_attention_heads,
@@ -110,18 +108,10 @@ def main():
 
     logger.info("Initialising Roberta from scratch")
     model = RobertaForMaskedLM(config)
-    model.resize_token_embeddings(len(tokenizer))
 
     # Preprocessing the datasets.
     # First we tokenize all the texts.
-    column_names = datasets["train"].column_names
     text_column_name = "text"
-
-    if params.max_num_tokens_in_sequence > tokenizer.model_max_length:
-        logger.warning(
-            f"The max_seq_length passed ({params.max_num_tokens_in_sequence}) is larger than the maximum length for the"
-            f"model ({tokenizer.model_max_length}). Using max_seq_length={tokenizer.model_max_length}."
-        )
 
     def tokenize_function(examples):
         # Remove empty lines

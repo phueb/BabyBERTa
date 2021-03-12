@@ -1,3 +1,19 @@
+"""
+Probe roberta models trained in fairseq in the same way that BabyBert is probed.
+
+To guarantee the correct vocab is loaded, modify cfg in fairseq.fairseq.checkpoint_utils by adding:
+
+from fairseq.dataclass.utils import overwrite_args_by_name
+new_bpe_cfg = {
+'_name': 'gpt2',
+'gpt2_encoder_json': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/vocab.json',
+'gpt2_vocab_bpe': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/merges.txt',
+}
+overrides = {'bpe': new_bpe_cfg}
+overwrite_args_by_name(cfg, overrides)
+print(cfg['bpe'])
+"""
+import shutil
 import torch
 from torch.nn import CrossEntropyLoss
 from fairseq import utils
@@ -130,11 +146,16 @@ if __name__ == '__main__':
 
             # get step
             state = load_checkpoint_to_cpu(str(architecture_path / 'checkpoints' / f'{CHECKPOINT_NAME}.pt'))
-            step = state['cfg']['total_num_update']
+            print(state['cfg']['model'])
+            step = state['cfg']['model'].total_num_update
 
             models.append(roberta)
             steps.append(step)
             names.append(architecture_path.name)
+
+            # remove previous results
+            if (configs.Dirs.probing_results / architecture_path.name).exists():
+                shutil.rmtree(configs.Dirs.probing_results / architecture_path.name)
 
     if not models:
         raise RuntimeError('Did not find models.')
@@ -142,20 +163,6 @@ if __name__ == '__main__':
     for model, step, name in zip(models, steps, names):
 
         # check encoder of model
-        """
-        to guarantee the correct vocab is loaded, modify cfg in fairseq.fairseq.checkpoint_utils by adding:
-        
-        from fairseq.dataclass.utils import overwrite_args_by_name
-        new_bpe_cfg = {
-        '_name': 'gpt2',
-        'gpt2_encoder_json': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/vocab.json',
-        'gpt2_vocab_bpe': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/merges.txt',
-        }
-        overrides = {'bpe': new_bpe_cfg}
-        overwrite_args_by_name(cfg, overrides)
-        print(cfg['bpe'])
-        """
-
         encoder: Encoder = model.bpe.bpe
         vocab = encoder.encoder
         print(f'Found {len(vocab)} words in vocab')
