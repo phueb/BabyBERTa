@@ -35,8 +35,8 @@ if __name__ == '__main__':
         if not (path_model_results / 'param2val.yaml').exists():
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': 'huggingface',
-                                      'is_official': 'official',
-                                      'is_reference': 'reference'})
+                                      'is_official': True,
+                                      'is_reference': True})
 
         for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
             do_probing(save_path,
