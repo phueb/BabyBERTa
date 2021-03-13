@@ -1,6 +1,6 @@
 import yaml
 import numpy as np
-from typing import List
+from typing import List, Dict, Any
 from pathlib import Path
 
 from babybert import configs
@@ -113,9 +113,8 @@ def load_sentences_from_file(file_path: Path,
     return sentences
 
 
-def save_yaml_file(param2val_path: Path,
-                   architecture: str,
+def save_yaml_file(path_out: Path,
+                   param2val: Dict[str, Any],
                    ):
-    param2val = {'architecture': architecture}
-    with param2val_path.open('w', encoding='utf8') as f:
+    with path_out.open('w', encoding='utf8') as f:
         yaml.dump(param2val, f, default_flow_style=False, allow_unicode=True)

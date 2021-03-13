@@ -1,18 +1,77 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional, Union
 import numpy as np
 import attr
 import torch
+from fairseq import utils
+from fairseq.models.roberta import RobertaHubInterface
 from torch.nn import CrossEntropyLoss
 
 from tokenizers import Tokenizer
 from transformers.models.roberta import RobertaForMaskedLM
-from transformers.models.bert import BertForMaskedLM
 
-from babybert.io import save_yaml_file
+
+from babybert import configs
 from babybert.utils import make_sequences
 from babybert.dataset import DataSet
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
+
+
+def do_probing(save_path: Path,
+               sentences_path: Path,
+               model: Union[RobertaForMaskedLM, RobertaHubInterface],
+               step: int,
+               include_punctuation: bool,
+               score_with_mask: bool,
+               verbose: bool = False,
+               tokenizer: Optional[Tokenizer] = None,  # not needed when probing fairseq Roberta
+               ) -> None:
+    """
+    probe a model on a single task.
+
+    a model is a Roberta model, and can be from fairseq or huggingface framework
+    """
+    model.eval()
+
+    task_name = sentences_path.stem
+    task_type = sentences_path.parent.name
+
+    # load probing sentences
+    print(f'Starting probing with task={task_name}', flush=True)
+    sentences = load_sentences_from_file(sentences_path, include_punctuation=include_punctuation)
+
+    # prepare dataset (if using huggingface model)
+    if tokenizer is not None:
+        sequences = make_sequences(sentences, num_sentences_per_input=1)
+        assert len(sequences) == len(sentences)
+        dataset = DataSet.for_probing(sequences, tokenizer)
+    else:
+        dataset = None
+
+    # prepare out path
+    probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
+    if not probing_results_path.parent.exists():
+        probing_results_path.parent.mkdir(exist_ok=True, parents=True)
+
+    # do inference on forced-choice task
+    if task_type == 'forced_choice':
+        if tokenizer is not None:
+            cross_entropies = predict_forced_choice(model, dataset, score_with_mask)
+        else:
+            cross_entropies = predict_forced_choice_fairseq(model, sentences, score_with_mask)
+        save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
+
+    # do inference on open_ended task
+    elif task_type == 'open_ended':
+        if tokenizer is not None:
+            predicted_words = predict_open_ended(model, dataset)
+        else:
+            predicted_words = predict_open_ended_fairseq(model, sentences)
+        save_open_ended_predictions(sentences, predicted_words, probing_results_path,
+                                    verbose=True if 'dummy' in task_name else verbose)
+
+    else:
+        raise AttributeError('Invalid arg to "task_type".')
 
 
 def predict_open_ended(model: RobertaForMaskedLM,
@@ -96,48 +155,51 @@ def predict_forced_choice(model: RobertaForMaskedLM,
     return cross_entropies
 
 
-def do_probing(save_path: Path,
-               sentences_path: Path,
-               model: RobertaForMaskedLM,
-               tokenizer: Tokenizer,
-               step: int,
-               include_punctuation: bool,
-               score_with_mask: bool,
-               verbose: bool = False,
-               ) -> None:
-    model.eval()
+def make_pretty(sentence: str):
+    return " ".join([f"{w:<18}" for w in sentence.split()])
 
-    task_name = sentences_path.stem
-    task_type = sentences_path.parent.name
 
-    # load probing sentences into dataset
-    print(f'Starting probing with task={task_name}', flush=True)
-    sentences = load_sentences_from_file(sentences_path, include_punctuation=include_punctuation)
-    sequences = make_sequences(sentences, num_sentences_per_input=1)
-    assert len(sequences) == len(sentences)
-    probing_dataset = DataSet.for_probing(sequences, tokenizer)
+def predict_forced_choice_fairseq(model: RobertaHubInterface,
+                                  sentences: List[str],
+                                  score_with_mask: bool,  # TODO implement
+                                  ):
+    res = []
+    loss_fct = CrossEntropyLoss(reduction='none')
+    for n, sentence in enumerate(sentences):
+        with torch.no_grad():
+            tokens = model.encode(sentence)  # todo batch encode using encode()
+            if tokens.dim() == 1:
+                tokens = tokens.unsqueeze(0)
+            with utils.model_eval(model.model):
+                features, extra = model.model(
+                    tokens.long().to(device=model.device),
+                    features_only=False,
+                    return_all_hiddens=False,
+                )
+            logits_3d = features  # [batch size, seq length, vocab size]
+            # logits need to be [batch size, vocab size, seq length]
+            # tags need to be [batch size, seq length]
+            labels = tokens
+            ce = loss_fct(logits_3d.permute(0, 2, 1), labels).cpu().numpy().mean()
+            res.append(ce)
 
-    # prepare out path
-    probing_results_path = save_path / task_type / f'probing_{task_name}_results_{step}.txt'
-    if not probing_results_path.parent.exists():
-        probing_results_path.parent.mkdir(exist_ok=True, parents=True)
+            print(
+                f'{n + 1:>6}/{len(sentences):>6} | {ce:.2f} {make_pretty(sentence)}')
+    return res
 
-    # save param2val
-    param_path = save_path.parent.parent
-    if not param_path.is_dir():
-        param_path.mkdir(parents=True, exist_ok=True)
-    if not (param_path / 'param2val.yaml').exists():
-        save_yaml_file(param2val_path=param_path / 'param2val.yaml', architecture=param_path.name)
 
-    # do inference on forced-choice task
-    if task_type == 'forced_choice':
-        cross_entropies = predict_forced_choice(model, probing_dataset, score_with_mask)
-        save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
+def predict_open_ended_fairseq(model: RobertaHubInterface,
+                               sentences: List[str],
+                               ) -> List[str]:
 
-    # do inference on open_ended task
-    elif task_type == 'open_ended':
-        predicted_words = predict_open_ended(model, probing_dataset)
-        save_open_ended_predictions(sentences, predicted_words, probing_results_path,
-                                    verbose=True if 'dummy' in task_name else verbose)
-    else:
-        raise AttributeError('Invalid arg to "task_type".')
+    res = []
+    for n, sentence in enumerate(sentences):
+        with torch.no_grad():
+            for result in model.fill_mask(sentence, topk=3):
+                sentence_out, _, pw = result
+                if pw:  # sometimes empty string is predicted
+                    break
+            res.append(pw)
+            print(f'{n + 1:>6}/{len(sentences):>6} | {make_pretty(sentence_out)}')
+
+    return res

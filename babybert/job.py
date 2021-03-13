@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 import torch
 
+import transformers
 from transformers.models.roberta import RobertaForMaskedLM, RobertaConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
@@ -17,13 +18,13 @@ from babybert.dataset import DataSet
 
 def main(param2val):
 
-    import transformers
-
     assert transformers.__version__ == '4.3.3'
     assert torch.__version__ == '1.6.0+cu101'
 
     # params
     params = Params.from_param2val(param2val)
+    params.framework = 'huggingface'
+    params.is_official = False
     print(params, flush=True)
 
     #  paths to data

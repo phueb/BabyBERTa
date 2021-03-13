@@ -39,7 +39,7 @@ param2default = {
 
     # training
     'batch_size': 16,
-    'lr': 1e-4,  # 3 zeros after decimal, 1e-4 is used in fairseq and 1e-3 is default in huggingface
+    'lr': 1e-4,  # 1e-4 is used in fairseq (and performs better here), and 1e-3 is default in huggingface
     'num_epochs': 1,
     'num_warmup_steps': 10_000,  # slightly better than 0
     'weight_decay': 0.0,

@@ -36,41 +36,42 @@ from babybert.io import load_sentences_from_file
 from babybert.utils import make_sequences
 from babybert import configs
 from babybert.params import param2default, Params
-from babybert.utils import load_tokenizer
-
-
-SEED = 1
-preprocessing_num_workers = 4
-
-
-params = Params.from_param2val(param2default)
-
-training_args = TrainingArguments(
-    output_dir='output',
-    overwrite_output_dir=True,
-    do_train=True,
-    do_eval=False,
-    do_predict=False,
-    per_device_train_batch_size=params.batch_size,
-    learning_rate=params.lr,
-    max_steps=160_000,
-    warmup_steps=params.num_warmup_steps,
-    seed=SEED,
-    save_steps=40_000,
-)
-
-logger = logging.getLogger(__name__)
 
 
 def main():
 
-    # Setup logging
+    params = Params.from_param2val(param2default)
+
+    # get new rep
+    rep = 0
+    path_out = configs.Dirs.root / 'official_implementation' / f'rep_{rep}'
+    while path_out.exists():
+        rep += 1
+        path_out = configs.Dirs.root / 'official_implementation' / f'rep_{rep}'
+
+    print(f'replication={rep}')
+
+    training_args = TrainingArguments(
+        output_dir=str(path_out),
+        overwrite_output_dir=False,
+        do_train=True,
+        do_eval=False,
+        do_predict=False,
+        per_device_train_batch_size=params.batch_size,
+        learning_rate=params.lr,
+        max_steps=160_000,
+        warmup_steps=params.num_warmup_steps,
+        seed=rep,
+        save_steps=40_000,
+    )
+
+    logger = logging.getLogger(__name__)
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
         datefmt="%m/%d/%Y %H:%M:%S",
     )
     logger.setLevel(logging.INFO)
-    set_seed(SEED)
+    set_seed(rep)
 
     logger.info("Loading data")
     data_path = configs.Dirs.corpora / f'{params.corpus_name}.txt'
@@ -119,9 +120,9 @@ def main():
     tokenized_datasets = datasets.map(
         tokenize_function,
         batched=True,
-        num_proc=preprocessing_num_workers,
+        num_proc=4,
         remove_columns=[text_column_name],
-        load_from_cache_file=False,
+        load_from_cache_file=True,
     )
 
     train_dataset = tokenized_datasets["train"]
@@ -142,8 +143,8 @@ def main():
     )
 
     # Training
-    train_result = trainer.train()
-    trainer.save_model()  # Saves the tokenizer too for easy upload
+    trainer.train()
+    trainer.save_model()  # Saves the tokenizer too
 
 
 if __name__ == "__main__":
