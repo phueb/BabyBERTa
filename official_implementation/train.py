@@ -44,10 +44,10 @@ def main():
 
     # get new rep
     rep = 0
-    path_out = configs.Dirs.root / 'official_implementation' / f'rep_{rep}'
+    path_out = configs.Dirs.root / 'official_implementation' / str(rep)
     while path_out.exists():
         rep += 1
-        path_out = configs.Dirs.root / 'official_implementation' / f'rep_{rep}'
+        path_out = configs.Dirs.root / 'official_implementation' / str(rep)
 
     print(f'replication={rep}')
 

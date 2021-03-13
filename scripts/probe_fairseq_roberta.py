@@ -22,9 +22,7 @@ from babybert import configs
 from babybert.probing import do_probing
 from babybert.io import save_yaml_file
 
-DATE = 'march11'
-IMPLEMENTATION = ['custom', 'official'][0]  # is code official?
-CONFIGURATION = ['reference', DATE][1]  # is param configuration "reference"?
+MODEL_DATA_FOLDER_NAME = 'fairseq_custom_march11'
 
 NUM_VOCAB = 8192  # used to check the length of the loaded vocab, pytorch hub models may load an unwanted vocab
 
@@ -33,16 +31,14 @@ if __name__ == '__main__':
 
     assert configs.Dirs.probing_sentences.exists()
 
-    # make model_data_folder_name
-    framework = 'fairseq'
-    model_data_folder_name = f'{framework}_{IMPLEMENTATION}_{CONFIGURATION}'
+    framework, implementation, configuration = MODEL_DATA_FOLDER_NAME.split('_')
 
     # remove previous results
-    path_model_results = configs.Dirs.probing_results / model_data_folder_name
+    path_model_results = configs.Dirs.probing_results / MODEL_DATA_FOLDER_NAME
     if path_model_results.exists():
         shutil.rmtree(path_model_results)
 
-    path_model_data = configs.Dirs.root / 'fairseq_models' / model_data_folder_name
+    path_model_data = configs.Dirs.root / 'fairseq_models' / MODEL_DATA_FOLDER_NAME
 
     for path_checkpoint in (path_model_data / 'checkpoints').glob('checkpoint_last.pt'):
 
@@ -82,8 +78,8 @@ if __name__ == '__main__':
         if not (path_model_results / 'param2val.yaml').exists():
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': framework,
-                                      'is_official': IS_OFFICIAL,
-                                      'is_reference': IS_REFERENCE})
+                                      'is_official': True if implementation == 'official' else False,
+                                      'is_reference': True if configuration == 'reference' else False})
 
         # for each probing task
         for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):

@@ -116,5 +116,7 @@ def load_sentences_from_file(file_path: Path,
 def save_yaml_file(path_out: Path,
                    param2val: Dict[str, Any],
                    ):
+    if not path_out.parent.exists():
+        path_out.parent.mkdir()
     with path_out.open('w', encoding='utf8') as f:
         yaml.dump(param2val, f, default_flow_style=False, allow_unicode=True)
