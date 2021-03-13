@@ -35,6 +35,7 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - smaller vocabulary: ~8K vs ~30K
 - masked locations are never replaced by the original or a random word
 - smaller batch size: 16 vs. 256
+- sentences with > 128 tokens are excluded (and never truncated)
 - fewer training steps: 160K steps (approx 5-6 epochs) vs. many more in the original RoBERTa
 - training examples are ordered by the age of the child to whom the utterance is directed to
 - input sequences consist of 1 utterance, as opposed to multiple sentences

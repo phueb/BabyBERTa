@@ -3,12 +3,11 @@ import attr
 param2requests = {
     # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
 
-    'layer_norm_eps': [1e-5, 1e-12]
-
+    'lr': [1e-3, 1e-4, 1e-5],
 
     # uncomment, in order to run configuration close as possible to reference roberta
-    # 'leave_unmasked_prob': [0.1, 0.0],
-    # 'random_token_prob': [0.1, 0.0],
+    'leave_unmasked_prob': [0.1],
+    'random_token_prob': [0.1],
 
 
 }
@@ -40,7 +39,7 @@ param2default = {
 
     # training
     'batch_size': 16,
-    'lr': 1e-4,  # 3 zeros after decimal
+    'lr': 1e-4,  # 3 zeros after decimal, 1e-4 is used in fairseq and 1e-3 is default in huggingface
     'num_epochs': 1,
     'num_warmup_steps': 10_000,  # slightly better than 0
     'weight_decay': 0.0,
@@ -54,7 +53,7 @@ param2default = {
     'num_attention_heads': 8,
     'intermediate_size': 1024,
     'initializer_range': 0.02,  # stdev of trunc normal for initializing all weights
-    'layer_norm_eps': 1e-5,  # 1e-5 used in fariseq, but 1e-12 used in hgugingface
+    'layer_norm_eps': 1e-5,  # 1e-5 default in fairseq (and slightly better performance), 1e-12 default in hgugingface,
 }
 
 

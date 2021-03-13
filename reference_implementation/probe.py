@@ -17,10 +17,6 @@ params = Params.from_param2val(param2default)
 
 if __name__ == '__main__':
 
-    models = []
-    steps = []
-    names = []
-
     print(f'Loading reference roberta')
     model_name = f'output/checkpoint-{MAX_STEP}'
     roberta = RobertaForMaskedLM.from_pretrained(model_name)
@@ -31,20 +27,10 @@ if __name__ == '__main__':
 
     architecture_name = 'reference_roberta'
     step = MAX_STEP
-
-    # use only 1 rep - and overwrite results each time
     rep = 0
     save_path = configs.Dirs.probing_results / architecture_name / str(rep) / 'saves'
 
     for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
-
-        task_type = sentences_path.parent.name
-
-        if not OPEN_ENDED and task_type == 'open_ended':
-            continue
-        if not FORCED_CHOICE and task_type == 'forced_choice':
-            continue
-
         do_probing(save_path, sentences_path, roberta, tokenizer, step,
                    params.include_punctuation, params.score_with_mask,
                    verbose=True)
