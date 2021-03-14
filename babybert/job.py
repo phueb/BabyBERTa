@@ -43,7 +43,8 @@ def main(param2val):
         save_path.mkdir(parents=True)
 
     # Byte-level BPE tokenizer
-    tokenizer = load_tokenizer(params, project_path)
+    path_tokenizer_config = project_path / 'data' / 'tokenizers' / f'{params.bbpe}.json'
+    tokenizer = load_tokenizer(path_tokenizer_config, params.max_num_tokens_in_sequence)
     vocab_size = len(tokenizer.get_vocab())
     print(f'Vocab size={vocab_size}')
 

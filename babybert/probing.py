@@ -11,7 +11,6 @@ from tokenizers import Tokenizer
 from transformers.models.roberta import RobertaForMaskedLM
 
 
-from babybert import configs
 from babybert.utils import make_sequences
 from babybert.dataset import DataSet
 from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
@@ -58,7 +57,7 @@ def do_probing(save_path: Path,
         if tokenizer is not None:
             cross_entropies = predict_forced_choice(model, dataset, score_with_mask)
         else:
-            cross_entropies = predict_forced_choice_fairseq(model, sentences, score_with_mask)
+            cross_entropies = predict_forced_choice_fairseq(model, sentences, score_with_mask, verbose)
         save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
     # do inference on open_ended task
@@ -162,6 +161,7 @@ def make_pretty(sentence: str):
 def predict_forced_choice_fairseq(model: RobertaHubInterface,
                                   sentences: List[str],
                                   score_with_mask: bool,  # TODO implement
+                                  verbose: bool,
                                   ):
     res = []
     loss_fct = CrossEntropyLoss(reduction='none')
@@ -183,8 +183,9 @@ def predict_forced_choice_fairseq(model: RobertaHubInterface,
             ce = loss_fct(logits_3d.permute(0, 2, 1), labels).cpu().numpy().mean()
             res.append(ce)
 
-            print(
-                f'{n + 1:>6}/{len(sentences):>6} | {ce:.2f} {make_pretty(sentence)}')
+            if verbose:
+                print(
+                    f'{n + 1:>6}/{len(sentences):>6} | {ce:.2f} {make_pretty(sentence)}')
     return res
 
 

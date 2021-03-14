@@ -87,18 +87,16 @@ def forward_mlm(model,
     return loss
 
 
-def load_tokenizer(params,
-                   project_path: Path,
+def load_tokenizer(config_path: Path,
+                   max_num_tokens_in_sequence: int,
                    ) -> Tokenizer:
 
-    json_fn = f'{params.bbpe}.json'
-
-    tokenizer = Tokenizer.from_file(str(project_path / 'data' / 'tokenizers' / json_fn))
+    tokenizer = Tokenizer.from_file(str(config_path))
     tokenizer.post_processor = TemplateProcessing(
         single="<s> $A </s>",
         pair=None,
         special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
     )
     tokenizer.enable_padding(pad_id=tokenizer.token_to_id(configs.Data.pad_symbol), pad_token=configs.Data.pad_symbol)
-    tokenizer.enable_truncation(max_length=params.max_num_tokens_in_sequence)
+    tokenizer.enable_truncation(max_length=max_num_tokens_in_sequence)
     return tokenizer

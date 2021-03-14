@@ -33,10 +33,10 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - trained on American-English child-directed speech: ~5M words vs ~2B words 
 - fewer hidden units and layers: ~10M parameters vs ~100M
 - smaller vocabulary: ~8K vs ~30K
-- masked locations are never replaced by the original or a random word
+- masked tokens are never unmasked or replaced by a random token
 - smaller batch size: 16 vs. 256
 - sentences with > 128 tokens are excluded (and never truncated)
-- fewer training steps: 160K steps (approx 5-6 epochs) vs. many more in the original RoBERTa
+- fewer training steps: 160K steps (approx 5-6 epochs) vs. 500K
 - training examples are ordered by the age of the child to whom the utterance is directed to
 - input sequences consist of 1 utterance, as opposed to multiple sentences
 

@@ -226,7 +226,8 @@ class DataSet:
         batch_shape = input_ids_raw.shape
         mask = self._make_mask_matrix(batch_shape, mask_patterns)
 
-        assert batch_shape[1] <= self.params.max_num_tokens_in_sequence
+        if batch_shape[1] > self.params.max_num_tokens_in_sequence:
+            raise ValueError(f'Batch dim 1 ({batch_shape[1]}) is larger than {self.params.max_num_tokens_in_sequence}')
 
         # decide unmasking and random replacement
         rand_or_unmask_prob = self.params.random_token_prob + self.params.leave_unmasked_prob

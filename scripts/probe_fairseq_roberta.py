@@ -21,6 +21,7 @@ from fairseq.checkpoint_utils import load_checkpoint_to_cpu
 from babybert import configs
 from babybert.probing import do_probing
 from babybert.io import save_yaml_file
+from babybert.params import Params, param2default
 
 MODEL_DATA_FOLDER_NAME = 'fairseq_custom_march11'
 
@@ -40,11 +41,13 @@ if __name__ == '__main__':
 
     path_model_data = configs.Dirs.root / 'fairseq_models' / MODEL_DATA_FOLDER_NAME
 
-    for path_checkpoint in (path_model_data / 'checkpoints').glob('checkpoint_last.pt'):
+    for path_checkpoint in path_model_data.rglob('checkpoint_last.pt'):
+
+        rep = path_checkpoint.parent.name
 
         # load model
         print(f'Loading model from {path_checkpoint}')
-        model = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / 'checkpoints'),
+        model = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / rep),
                                              checkpoint_file=str(path_checkpoint),
                                              data_name_or_path=str(path_model_data / 'data-bin'),
                                              )
@@ -53,8 +56,24 @@ if __name__ == '__main__':
 
         # get step
         state = load_checkpoint_to_cpu(str(path_checkpoint))
-        print(state['cfg']['model'])
         step = state['cfg']['model'].total_num_update
+
+        print(state['cfg']['model'])
+        # raise SystemExit
+
+        # check that configuration really corresponds to reference configuration
+        if configuration == 'reference':
+            params = Params.from_param2val(param2default)
+            assert state['cfg']['model'].max_sentences == params.batch_size
+            assert state['cfg']['model'].random_token_prob == 0.1
+            assert state['cfg']['model'].leave_unmasked_prob == 0.1
+            assert state['cfg']['model'].mask_prob == params.mask_probability
+            assert state['cfg']['model'].sample_break_mode == 'eos'
+            assert state['cfg']['model'].encoder_attention_heads == params.num_attention_heads
+            assert state['cfg']['model'].encoder_embed_dim == params.hidden_size
+            assert state['cfg']['model'].encoder_ffn_embed_dim == params.intermediate_size
+            assert state['cfg']['model'].encoder_layers == params.num_layers
+            assert state['cfg']['model'].lr == [params.lr]
 
         # check encoder of model
         encoder: Encoder = model.bpe.bpe
@@ -63,23 +82,19 @@ if __name__ == '__main__':
         if not len(vocab) == NUM_VOCAB:
             raise RuntimeError(f'Pretrained model state dict points to vocab that is not of size={NUM_VOCAB}')
 
-        # make new save_path for each replication of the model
-        rep = 0
+        # make new save_path
         save_path = path_model_results / str(rep) / 'saves'
-        while save_path.exists():
-            rep += 1
-            save_path = path_model_results / 'saves'
         if not save_path.is_dir():
             save_path.mkdir(parents=True, exist_ok=True)
-
-        # TODO check state if model is_reference
 
         # save basic model info
         if not (path_model_results / 'param2val.yaml').exists():
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': framework,
                                       'is_official': True if implementation == 'official' else False,
-                                      'is_reference': True if configuration == 'reference' else False})
+                                      'is_reference': True if configuration == 'reference' else False,
+                                      'is_base': False,
+                                      })
 
         # for each probing task
         for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
