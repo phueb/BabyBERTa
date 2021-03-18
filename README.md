@@ -30,10 +30,10 @@ BabyBERT is inspired by the original RoBERTa model, but departs from it in many 
 Because our goal is to work with a compact model, optimized for acquiring distributional knowledge about child-directed speech,
  rather than some down-stream application, BabyBERT differs from the original BERT in the following ways:
  
-- trained on American-English child-directed speech: ~5M words vs ~2B words 
-- fewer hidden units and layers: ~10M parameters vs ~100M
+- trained on American-English child-directed speech: ~5M words vs ~30B words 
+- fewer hidden units, attention heads, and layers: ~10M parameters vs ~100M
 - smaller vocabulary: ~8K vs ~30K
-- masked tokens are never unmasked or replaced by a random token
+- masked tokens are never unmasked
 - smaller batch size: 16 vs. 256
 - sentences with > 128 tokens are excluded (and never truncated)
 - fewer training steps: 160K steps (approx 5-6 epochs) vs. 500K
