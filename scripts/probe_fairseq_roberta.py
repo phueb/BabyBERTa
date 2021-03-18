@@ -23,7 +23,7 @@ from babybert.probing import do_probing
 from babybert.io import save_yaml_file
 from babybert.params import Params, param2default
 
-MODEL_DATA_FOLDER_NAME = 'fairseq_custom_march11'
+MODEL_DATA_FOLDER_NAME = 'fairseq_official_reference'
 
 NUM_VOCAB = 8192  # used to check the length of the loaded vocab, pytorch hub models may load an unwanted vocab
 
@@ -68,7 +68,7 @@ if __name__ == '__main__':
             assert state['cfg']['model'].random_token_prob == 0.1
             assert state['cfg']['model'].leave_unmasked_prob == 0.1
             assert state['cfg']['model'].mask_prob == params.mask_probability
-            assert state['cfg']['model'].sample_break_mode == 'eos'
+            # assert state['cfg']['model'].sample_break_mode == 'eos'  # TODO verify this
             assert state['cfg']['model'].encoder_attention_heads == params.num_attention_heads
             assert state['cfg']['model'].encoder_embed_dim == params.hidden_size
             assert state['cfg']['model'].encoder_ffn_embed_dim == params.intermediate_size
@@ -98,6 +98,10 @@ if __name__ == '__main__':
 
         # for each probing task
         for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
+
+            # if not '1_adjective' in sentences_path.name:
+            #     continue
+
             do_probing(save_path,
                        sentences_path,
                        model,

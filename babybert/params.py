@@ -1,13 +1,9 @@
 import attr
 
 param2requests = {
-    # 'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
+    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
 
-    'lr': [1e-3, 1e-4, 1e-5],
-
-    # uncomment, in order to run configuration close as possible to reference roberta
-    'leave_unmasked_prob': [0.1],
-    'random_token_prob': [0.1],
+    'leave_unmasked_prob': [0.1, 0.0],
 
 
 }
@@ -30,8 +26,8 @@ param2default = {
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
-    'leave_unmasked_prob': 0.0,
-    'random_token_prob': 0.0,
+    'leave_unmasked_prob': 0.0,  # setting this to zero makes BabyBERT perform better than standard Roberta
+    'random_token_prob': 0.1,
     'corpus_name': 'newsela',
     'bbpe': 'c-n-w-8192',  # larger than 8k slightly reduces performance
     'add_prefix_space': True,  # better if True, whether to treat first token like any other token (False in GPT-2)
