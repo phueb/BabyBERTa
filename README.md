@@ -65,7 +65,7 @@ Potential differences include:
 
 ## Pre-processing Pipeline
 
-1. Raw text data, in `txt` files, was previously tokenized using `spacy` which splits on contractions.
+1. Raw text data is used as the starting point.
 2. Sentences are separated and those that are too short or too long are excluded.
 3. Multiple sentences may be combined (but default is 1) into a single sequence.
 4. Each sequence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.

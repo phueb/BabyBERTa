@@ -1,7 +1,7 @@
 import attr
 
 param2requests = {
-    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026', 'newsela'],
+    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026'],
 
     'leave_unmasked_prob': [0.1, 0.0],
 
@@ -28,7 +28,7 @@ param2default = {
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
     'leave_unmasked_prob': 0.0,  # setting this to zero makes BabyBERTa perform better than standard Roberta
     'random_token_prob': 0.1,
-    'corpus_name': 'newsela',
+    'corpus_name': 'childes-20201026',
     'bbpe': 'c-n-w-8192',  # larger than 8k slightly reduces performance
     'add_prefix_space': True,  # better if True, whether to treat first token like any other token (False in GPT-2)
     'max_num_tokens_in_sequence': 128,  # unacceptable performance if lower than ~32

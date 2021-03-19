@@ -12,7 +12,7 @@ from babyberta import configs
 
 VOCAB_SIZE = 4096 * 2
 MIN_FREQUENCY = 10  # was 10 before march 11, 2021
-CORPUS_NAMES = ['childes-20201026', 'newsela', 'wiki-20191017-hebb-3M_tokenized']
+CORPUS_NAMES = ['childes-20201026', 'wiki-20191017-hebb-3M_tokenized']
 ADD_PREFIX_SPACE = True
 
 tokenizer = Tokenizer(BPE(unk_token=configs.Data.unk_symbol))
