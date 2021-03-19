@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Dict, Any
 from pathlib import Path
 
-from babybert import configs
+from babyberta import configs
 
 
 def save_open_ended_predictions(raw_sentences: List[str],

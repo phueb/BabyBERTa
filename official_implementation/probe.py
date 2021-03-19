@@ -5,11 +5,11 @@ import shutil
 
 from transformers.models.roberta import RobertaForMaskedLM
 
-from babybert import configs
-from babybert.params import param2default, Params
-from babybert.probing import do_probing
-from babybert.utils import load_tokenizer
-from babybert.io import save_yaml_file
+from babyberta import configs
+from babyberta.params import param2default, Params
+from babyberta.probing import do_probing
+from babyberta.utils import load_tokenizer
+from babyberta.io import save_yaml_file
 
 
 MAX_STEP = 160_000

@@ -26,7 +26,7 @@ param2default = {
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
-    'leave_unmasked_prob': 0.0,  # setting this to zero makes BabyBERT perform better than standard Roberta
+    'leave_unmasked_prob': 0.0,  # setting this to zero makes BabyBERTa perform better than standard Roberta
     'random_token_prob': 0.1,
     'corpus_name': 'newsela',
     'bbpe': 'c-n-w-8192',  # larger than 8k slightly reduces performance

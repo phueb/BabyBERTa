@@ -7,10 +7,10 @@ import shutil
 
 from transformers.models.roberta import RobertaForMaskedLM
 
-from babybert.utils import load_tokenizer
-from babybert.probing import do_probing
-from babybert import configs
-from babybert.io import save_yaml_file
+from babyberta.utils import load_tokenizer
+from babyberta.probing import do_probing
+from babyberta import configs
+from babyberta.io import save_yaml_file
 
 
 for model_results_folder_name in ['huggingface_official_base', 'fairseq_official_base']:

@@ -6,7 +6,7 @@ It also outputs a corpus that roughly matches the other two in the number of seq
 import spacy
 from pathlib import Path
 
-from babybert import configs
+from babyberta import configs
 
 CORPUS_PATH = Path('/media/ludwig_data/CreateWikiCorpus/runs/param_22/hebb_2019-10-17-23-02-53_num0/more_words_small_bodies.txt')
 OUT_NAME = 'wiki-20191017-hebb'

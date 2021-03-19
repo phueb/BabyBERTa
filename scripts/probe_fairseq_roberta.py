@@ -1,13 +1,13 @@
 """
-Probe roberta models trained in fairseq in the same way that BabyBert is probed.
+Probe roberta models trained in fairseq in the same way that BabyBERTa is probed.
 
 To guarantee the correct vocab is loaded, modify cfg in fairseq.fairseq.checkpoint_utils by adding:
 
 from fairseq.dataclass.utils import overwrite_args_by_name
 new_bpe_cfg = {
 '_name': 'gpt2',
-'gpt2_encoder_json': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/vocab.json',
-'gpt2_vocab_bpe': '/home/ph/BabyBERT/pretrained_models/roberta-feb25/checkpoints/merges.txt',
+'gpt2_encoder_json': '/home/ph/BabyBERTa/pretrained_models/roberta-feb25/checkpoints/vocab.json',
+'gpt2_vocab_bpe': '/home/ph/BabyBERTa/pretrained_models/roberta-feb25/checkpoints/merges.txt',
 }
 overrides = {'bpe': new_bpe_cfg}
 overwrite_args_by_name(cfg, overrides)
@@ -18,10 +18,10 @@ from fairseq.models.roberta import RobertaModel
 from fairseq.data.encoders.gpt2_bpe_utils import Encoder
 from fairseq.checkpoint_utils import load_checkpoint_to_cpu
 
-from babybert import configs
-from babybert.probing import do_probing
-from babybert.io import save_yaml_file
-from babybert.params import Params, param2default
+from babyberta import configs
+from babyberta.probing import do_probing
+from babyberta.io import save_yaml_file
+from babyberta.params import Params, param2default
 
 MODEL_DATA_FOLDER_NAME = 'fairseq_official_reference'
 

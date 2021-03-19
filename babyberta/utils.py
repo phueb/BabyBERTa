@@ -9,7 +9,7 @@ from pathlib import Path
 from tokenizers import Tokenizer
 from tokenizers.processors import TemplateProcessing
 
-from babybert import configs
+from babyberta import configs
 
 
 loss_fct = CrossEntropyLoss()

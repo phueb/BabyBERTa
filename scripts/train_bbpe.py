@@ -7,7 +7,7 @@ from tokenizers.pre_tokenizers import ByteLevel
 from tokenizers.trainers import BpeTrainer
 from tokenizers.normalizers import Lowercase
 
-from babybert import configs
+from babyberta import configs
 
 
 VOCAB_SIZE = 4096 * 2

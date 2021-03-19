@@ -9,9 +9,9 @@ from tokenizers import Encoding
 from tokenizers import Tokenizer
 
 
-from babybert import configs
-from babybert.utils import RobertaInput
-from babybert.params import Params
+from babyberta import configs
+from babyberta.utils import RobertaInput
+from babyberta.params import Params
 
 
 class ProbingParams:

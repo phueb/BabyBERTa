@@ -8,12 +8,12 @@ import transformers
 from transformers.models.roberta import RobertaForMaskedLM, RobertaConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
-from babybert import configs
-from babybert.io import load_sentences_from_file
-from babybert.params import Params
-from babybert.utils import split, make_sequences, forward_mlm, load_tokenizer
-from babybert.probing import do_probing
-from babybert.dataset import DataSet
+from babyberta import configs
+from babyberta.io import load_sentences_from_file
+from babyberta.params import Params
+from babyberta.utils import split, make_sequences, forward_mlm, load_tokenizer
+from babyberta.probing import do_probing
+from babyberta.dataset import DataSet
 
 
 def main(param2val):
@@ -56,8 +56,8 @@ def main(param2val):
     all_sequences = make_sequences(sentences, params.num_sentences_per_input)
     train_sequences, devel_sequences, test_sequences = split(all_sequences)
 
-    # BabyBERT
-    print('Preparing BabyBERT...')
+    # BabyBERTa
+    print('Preparing BabyBERTa...')
 
     config = RobertaConfig(vocab_size=vocab_size,
                            pad_token_id=tokenizer.token_to_id(configs.Data.pad_symbol),
@@ -172,6 +172,6 @@ def main(param2val):
         s.name = name
         performance_curves.append(s)
 
-    print('Reached end of babybert.job.main', flush=True)
+    print('Reached end of babyberta.job.main', flush=True)
 
     return performance_curves

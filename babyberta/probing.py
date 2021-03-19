@@ -11,9 +11,9 @@ from tokenizers import Tokenizer
 from transformers.models.roberta import RobertaForMaskedLM
 
 
-from babybert.utils import make_sequences
-from babybert.dataset import DataSet
-from babybert.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
+from babyberta.utils import make_sequences
+from babyberta.dataset import DataSet
+from babyberta.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
 
 
 def do_probing(save_path: Path,

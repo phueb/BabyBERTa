@@ -11,7 +11,7 @@ Our model is implemented using the `transformers` Python package, maintained by 
 
 ## History
 
-- 2020 (Spring): The BabyBERT project grew out of the BabySRL project led by Cynthia Fisher, Dan Roth, Michael Connor and Yael Gertner, 
+- 2020 (Spring): The BabyBERTa project grew out of the BabySRL project led by Cynthia Fisher, Dan Roth, Michael Connor and Yael Gertner, 
 whose published work is available [here](https://www.aclweb.org/anthology/W08-2111/). 
 Having found little benefit for joint SRL and MLM training of a custom (smaller in size) version of BERT,
  a new line of research into BERT's acquisition of syntactic knowledge began. 
@@ -23,12 +23,12 @@ Having found little benefit for joint SRL and MLM training of a custom (smaller 
 Probing data can be found [here](https://github.com/phueb/Zorro). 
 
 
-## BabyBERT vs. RoBERTa
+## BabyBERTa vs. RoBERTa
  
-BabyBERT is inspired by the original RoBERTa model, but departs from it in many ways.
+BabyBERTa is inspired by the original RoBERTa model, but departs from it in many ways.
  
 Because our goal is to work with a compact model, optimized for acquiring distributional knowledge about child-directed speech,
- rather than some down-stream application, BabyBERT differs from the original BERT in the following ways:
+ rather than some down-stream application, BabyBERTa differs from the original RoBERTa in the following ways:
  
 - trained on American-English child-directed speech: ~5M words vs ~30B words 
 - fewer hidden units, attention heads, and layers: ~10M parameters vs ~100M
@@ -44,8 +44,8 @@ To achieve good performance on our number agreement tasks,
 we observed the model must not be trained with more than 1 utterance per input.
 This observation hold for the CHILDES corpus, but not for other corpora.
 
-## BabyBERT vs. fairseq RoBERTa
-To train a BabyBERT like model using `fairseq`, make sure to use the following command line arguments: 
+## BabyBERTa vs. fairseq RoBERTa
+To train a BabyBERTa like model using `fairseq`, make sure to use the following command line arguments: 
 
 ```bash
 --batch-size 16
@@ -71,10 +71,10 @@ Potential differences include:
 4. Each sequence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.
 5. Multiple sequences are batched together (default is 16).
 6. Each batch of sequences is input to a custom trained `tokenizers` BBPE Tokenizer, 
-which produces output compatible with the `forward()` method of BabyBERT.
+which produces output compatible with the `forward()` method of BabyBERTa.
 
 
-## Using the BabyBERT vocab
+## Using the BabyBERTa vocab
 
 To use our 8192-words vocabulary for training a Roberta model in `fairseq` v0.10.2, 
 
