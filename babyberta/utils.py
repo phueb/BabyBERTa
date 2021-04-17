@@ -1,8 +1,7 @@
 import random
 import torch
 from torch.nn import CrossEntropyLoss
-from typing import Tuple, List
-import attr
+from typing import Tuple, List, Dict
 from itertools import islice
 from pathlib import Path
 
@@ -13,12 +12,6 @@ from babyberta import configs
 
 
 loss_fct = CrossEntropyLoss()
-
-
-@attr.s(slots=True, frozen=True)
-class RobertaInput:
-    input_ids: torch.tensor = attr.ib()
-    attention_mask: torch.tensor = attr.ib()
 
 
 def make_sequences(sentences: List[str],
@@ -72,10 +65,10 @@ def split(data: List[str],
 
 def forward_mlm(model,
                 mask_matrix: torch.bool,  # mask_matrix is 2D bool array specifying which tokens to predict
-                x: torch.tensor,
+                x: Dict[str, torch.tensor],
                 y: torch.tensor,
                 ) -> torch.tensor:
-    output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
+    output = model(**x)
     logits_3d = output['logits']
     logits_2d = logits_3d.view(-1, model.config.vocab_size)
     bool_1d = mask_matrix.view(-1)
@@ -100,3 +93,33 @@ def load_tokenizer(config_path: Path,
     tokenizer.enable_padding(pad_id=tokenizer.token_to_id(configs.Data.pad_symbol), pad_token=configs.Data.pad_symbol)
     tokenizer.enable_truncation(max_length=max_num_tokens_in_sequence)
     return tokenizer
+
+
+def load_wikipedia_sentences(input_filepath: Path,
+                             percent: int,
+                             ) -> List[str]:
+    """
+    return a sample of wiki sentences from a large text file, built using witokit.
+
+    """
+
+    if not 0 < percent < 100:
+        raise Exception('Specified percent param should be in ]0, 100[')
+    print('Sampling input file {}'.format(input_filepath))
+    print('Counting number of lines in file...')
+
+    with input_filepath.open('r', encoding='utf-8') as input_stream:
+        count = sum(1 for x in input_stream)
+        print('Total lines = {}'.format(count))
+    final_count = count * percent / 100
+    sampling = count / final_count
+    print('Sampling file to {} lines with '.format(int(final_count)))
+
+    # collect sentences
+    res = []
+    with open(input_filepath, 'r', encoding='utf-8') as input_stream:
+        for idx, line in enumerate(input_stream):
+            if idx % round(sampling) == 0:
+                res.append(line.strip())
+
+    return res

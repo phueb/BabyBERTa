@@ -1,4 +1,4 @@
-from typing import List, Tuple, Generator, Union, Optional
+from typing import List, Tuple, Generator, Union, Optional, Dict
 import random
 from itertools import combinations
 import numpy as np
@@ -10,7 +10,6 @@ from tokenizers import Tokenizer
 
 
 from babyberta import configs
-from babyberta.utils import RobertaInput
 from babyberta.params import Params
 
 
@@ -217,7 +216,8 @@ class DataSet:
     def mask_input_ids(self,
                        batch_encoding: List[Encoding],
                        mask_patterns: List[Tuple[int]],
-                       ) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None], torch.tensor], None, None]:
+                       ) -> Generator[Tuple[Dict[str, torch.tensor], Union[torch.LongTensor, None], torch.tensor],
+                                      None, None]:
 
         # collect each encoding into a single matrix (not needed before march 11, 2021)
         input_ids_raw = np.array([e.ids for e in batch_encoding])
@@ -269,9 +269,10 @@ class DataSet:
                 input_ids[rand_mask] = np.random.choice(vocab_size, num_rand, p=self.weights)
 
         # x
-        x = RobertaInput(input_ids=torch.tensor(input_ids),
-                         attention_mask=torch.tensor(attention_mask),
-                         )
+        x = {
+            'input_ids': torch.tensor(input_ids).to('cuda'),
+            'attention_mask': torch.tensor(attention_mask).to('cuda'),
+        }
 
         # y
         if not mask_patterns:  # forced-choice probing
@@ -281,7 +282,8 @@ class DataSet:
 
         yield x, y, torch.tensor(mask)
 
-    def __iter__(self) -> Generator[Tuple[RobertaInput, Union[torch.LongTensor, None], torch.tensor], None, None]:
+    def __iter__(self) -> Generator[Tuple[Dict[str, torch.tensor],  Union[torch.LongTensor, None], torch.tensor],
+                                    None, None]:
 
         """
         generate batches of vectorized data ready for training or probing.

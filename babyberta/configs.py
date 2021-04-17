@@ -6,9 +6,13 @@ class Dirs:
     data = root / 'data'
     corpora = data / 'corpora'
     tokenizers = data / 'tokenizers'
+
+    # probing data can be found at https://github.com/phueb/Zorro/tree/master/sentences
     probing_sentences = Path('/') / 'media' / 'ludwig_data' / 'Zorro' / 'sentences'
     probing_results = Path.home() / 'Zorro' / 'runs'
-    # probing data can be found at https://github.com/phueb/Zorro/tree/master/sentences
+
+    # wikipedia sentences file was created using https://github.com/akb89/witokit
+    wikipedia_sentences = Path.home() / 'witokit_download' / 'processed.txt'
 
 
 class Data:

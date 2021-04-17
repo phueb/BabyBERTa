@@ -6,4 +6,6 @@
 *.xml
 *.iml
 
-/data/corpora/newsela.txt
+/data/corpora/aonewsela.txt
+/witokit
+/witokit/*

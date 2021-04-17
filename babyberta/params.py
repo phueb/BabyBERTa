@@ -1,4 +1,4 @@
-import attr
+from dataclasses import dataclass
 
 param2requests = {
     'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026'],
@@ -53,43 +53,48 @@ param2default = {
 }
 
 
-@attr.s
-class Params(object):
+@dataclass
+class Params:
+    """
+    this object is loaded at the start of job.main() by calling Params.from_param2val(),
+    and is populated by Ludwig with hyper-parameters corresponding to a single job.
+    """
+
     # data
-    sample_with_replacement = attr.ib(validator=attr.validators.instance_of(bool))
-    consecutive_masking = attr.ib(validator=attr.validators.instance_of(bool))
-    num_sentences_per_input = attr.ib(validator=attr.validators.instance_of(int))
-    training_order = attr.ib(validator=attr.validators.instance_of(str))
-    include_punctuation = attr.ib(validator=attr.validators.instance_of(bool))
-    allow_truncated_sentences = attr.ib(validator=attr.validators.instance_of(bool))
-    num_mask_patterns = attr.ib(validator=attr.validators.instance_of(int))
-    mask_pattern_size = attr.ib(validator=attr.validators.instance_of(int))
-    probabilistic_masking = attr.ib(validator=attr.validators.instance_of(bool))
-    mask_probability = attr.ib()
-    leave_unmasked_prob = attr.ib(validator=attr.validators.instance_of(float))
-    random_token_prob = attr.ib(validator=attr.validators.instance_of(float))
-    corpus_name = attr.ib(validator=attr.validators.instance_of(str))
-    bbpe = attr.ib(validator=attr.validators.instance_of(str))
-    add_prefix_space = attr.ib(validator=attr.validators.instance_of(bool))
-    max_num_tokens_in_sequence = attr.ib(validator=attr.validators.instance_of(int))
+    sample_with_replacement: bool
+    consecutive_masking: bool
+    num_sentences_per_input: int
+    training_order: str
+    include_punctuation: bool
+    allow_truncated_sentences: bool
+    num_mask_patterns: int
+    mask_pattern_size: int
+    probabilistic_masking: bool
+    mask_probability: float
+    leave_unmasked_prob: float
+    random_token_prob: float
+    corpus_name: str
+    bbpe: str
+    add_prefix_space: bool
+    max_num_tokens_in_sequence: int
 
     # training
-    batch_size = attr.ib(validator=attr.validators.instance_of(int))
-    lr = attr.ib(validator=attr.validators.instance_of(float))
-    num_epochs = attr.ib(validator=attr.validators.instance_of(int))
-    num_warmup_steps = attr.ib(validator=attr.validators.instance_of(int))
-    weight_decay = attr.ib(validator=attr.validators.instance_of(float))
+    batch_size: int
+    lr: float
+    num_epochs: int
+    num_warmup_steps: int
+    weight_decay: float
 
     # eval
-    score_with_mask = attr.ib(validator=attr.validators.instance_of(bool))
+    score_with_mask: bool
 
     # model
-    num_layers = attr.ib(validator=attr.validators.instance_of(int))
-    hidden_size = attr.ib(validator=attr.validators.instance_of(int))
-    num_attention_heads = attr.ib(validator=attr.validators.instance_of(int))
-    intermediate_size = attr.ib(validator=attr.validators.instance_of(int))
-    initializer_range = attr.ib(validator=attr.validators.instance_of(float))
-    layer_norm_eps = attr.ib(validator=attr.validators.instance_of(float))
+    num_layers: int
+    hidden_size: int
+    num_attention_heads: int
+    intermediate_size: int
+    initializer_range: float
+    layer_norm_eps: float
 
     @classmethod
     def from_param2val(cls, param2val):

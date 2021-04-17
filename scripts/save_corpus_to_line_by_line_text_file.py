@@ -1,0 +1,30 @@
+"""
+This script writes line-by-line text files to disk.
+"""
+
+
+from aochildes.dataset import ChildesDataSet
+from aonewsela.dataset import NewselaDataSet
+
+from babyberta.utils import load_wikipedia_sentences
+from babyberta import configs
+
+CORPUS_NAME = 'aonewsela'
+
+
+# load corpus
+if CORPUS_NAME == 'aochildes':
+    sentences = ChildesDataSet().load_sentences()
+elif CORPUS_NAME == 'aonewsela':
+    sentences = NewselaDataSet().load_sentences()
+elif CORPUS_NAME == 'wikipedia':
+    sentences = load_wikipedia_sentences(configs.Dirs.wikipedia_sentences, percent=1)
+else:
+    raise AttributeError('Invalid corpus')
+
+print(f'Loaded {len(sentences):,} sentences')
+
+out_path = configs.Dirs.root / 'data' / 'corpora' / f'{CORPUS_NAME}.txt'
+with out_path.open('w') as f:
+    for sentence in sentences:
+        f.write(sentence + '\n')

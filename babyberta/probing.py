@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import List, Optional, Union
 import numpy as np
-import attr
 import torch
 from fairseq import utils
 from fairseq.models.roberta import RobertaHubInterface
@@ -83,7 +82,7 @@ def predict_open_ended(model: RobertaForMaskedLM,
 
         for x, _, mm in dataset:
             # get logits for all words in batch
-            output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
+            output = model(**x)
             logits_3d = output['logits'].detach()
 
             # get predicted words for masked locations
@@ -122,7 +121,7 @@ def predict_forced_choice(model: RobertaForMaskedLM,
 
             if not score_with_mask:
                 # get loss
-                output = model(**{k: v.to('cuda') for k, v in attr.asdict(x).items()})
+                output = model(**x)
                 logits_3d = output['logits']
                 logits_for_all_words = logits_3d.permute(0, 2, 1)
                 labels = x.input_ids.cuda()
