@@ -97,6 +97,7 @@ def load_tokenizer(config_path: Path,
 
 def load_wikipedia_sentences(input_filepath: Path,
                              percent: int,
+                             shift: int,
                              ) -> List[str]:
     """
     return a sample of wiki sentences from a large text file, built using witokit.
@@ -106,20 +107,19 @@ def load_wikipedia_sentences(input_filepath: Path,
     if not 0 < percent < 100:
         raise Exception('Specified percent param should be in ]0, 100[')
     print('Sampling input file {}'.format(input_filepath))
-    print('Counting number of lines in file...')
 
+    print('Counting number of lines in file...')
     with input_filepath.open('r', encoding='utf-8') as input_stream:
-        count = sum(1 for x in input_stream)
-        print('Total lines = {}'.format(count))
-    final_count = count * percent / 100
-    sampling = count / final_count
-    print('Sampling file to {} lines with '.format(int(final_count)))
+        num_lines = sum(1 for x in input_stream)
+    print(f'Number of lines in {input_filepath}={num_lines:,}')
+    final_count = num_lines * percent / 100
+    sampling = num_lines / final_count
 
     # collect sentences
     res = []
     with open(input_filepath, 'r', encoding='utf-8') as input_stream:
         for idx, line in enumerate(input_stream):
-            if idx % round(sampling) == 0:
+            if (idx + shift) % round(sampling) == 0:  # TODO test that shift results in different corpora
                 res.append(line.strip())
 
     return res

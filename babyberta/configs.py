@@ -12,7 +12,7 @@ class Dirs:
     probing_results = Path.home() / 'Zorro' / 'runs'
 
     # wikipedia sentences file was created using https://github.com/akb89/witokit
-    wikipedia_sentences = Path.home() / 'witokit_download' / 'processed.txt'
+    wikipedia_sentences = Path.home() / 'witokit_download_1' / 'processed.txt'
 
 
 class Data:
