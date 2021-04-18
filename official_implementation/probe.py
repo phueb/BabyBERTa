@@ -30,7 +30,7 @@ if __name__ == '__main__':
         # load model and tokenizer
         roberta = RobertaForMaskedLM.from_pretrained(path_model)
         roberta.cuda(0)
-        path_tokenizer_config = configs.Dirs.root / 'data' / 'tokenizers' / f'{params.bbpe}.json'
+        path_tokenizer_config = configs.Dirs.root / 'data' / 'tokenizers' / f'{params.tokenizer}.json'
         tokenizer = load_tokenizer(path_tokenizer_config, params.max_num_tokens_in_sequence)
 
         step = MAX_STEP

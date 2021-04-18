@@ -68,7 +68,7 @@ def forward_mlm(model,
                 x: Dict[str, torch.tensor],
                 y: torch.tensor,
                 ) -> torch.tensor:
-    output = model(**x)
+    output = model(**{k: v.to('cuda') for k, v in x.items()})
     logits_3d = output['logits']
     logits_2d = logits_3d.view(-1, model.config.vocab_size)
     bool_1d = mask_matrix.view(-1)

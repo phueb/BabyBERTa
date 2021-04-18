@@ -27,9 +27,8 @@ def main(param2val):
     params.is_official = False
     print(params, flush=True)
 
-    #  paths to data
+    #  path to root folder on shared drive where results are saved, and data is loaded
     project_path = Path(param2val['project_path'])
-    data_path = project_path / 'data' / 'corpora' / f'{params.corpus_name}.txt'
 
     # probing path - contains probing sentences
     probing_path = configs.Dirs.probing_sentences
@@ -43,16 +42,21 @@ def main(param2val):
         save_path.mkdir(parents=True)
 
     # Byte-level BPE tokenizer
-    path_tokenizer_config = project_path / 'data' / 'tokenizers' / f'{params.bbpe}.json'
+    path_tokenizer_config = project_path / 'data' / 'tokenizers' / f'{params.tokenizer}.json'
     tokenizer = load_tokenizer(path_tokenizer_config, params.max_num_tokens_in_sequence)
     vocab_size = len(tokenizer.get_vocab())
     print(f'Vocab size={vocab_size}')
 
-    # load text data
-    sentences = load_sentences_from_file(data_path,
-                                         training_order=params.training_order,
-                                         include_punctuation=params.include_punctuation,
-                                         allow_discard=True)
+    # load sentences from all three corpora
+    sentences = []
+    for corpus_name in params.corpora:
+        data_path = project_path / 'data' / 'corpora' / f'{corpus_name}.txt'
+        sentences_in_corpus = load_sentences_from_file(data_path,
+                                                       training_order=params.training_order,
+                                                       include_punctuation=params.include_punctuation,
+                                                       allow_discard=True)
+        print(f'Loaded {len(sentences_in_corpus):>12,} sentences from {corpus_name}')
+        sentences += sentences_in_corpus
     all_sequences = make_sequences(sentences, params.num_sentences_per_input)
     train_sequences, devel_sequences, test_sequences = split(all_sequences)
 
@@ -67,7 +71,7 @@ def main(param2val):
                            is_decoder=False,
                            is_encoder_decoder=False,
                            add_cross_attention=False,
-                           layer_norm_eps=params.layer_norm_eps,  # TODO test 1e-5 used in fairseq
+                           layer_norm_eps=params.layer_norm_eps,  # 1e-5 used in fairseq
                            max_position_embeddings=params.max_num_tokens_in_sequence + 2,
                            hidden_size=params.hidden_size,
                            num_hidden_layers=params.num_layers,

@@ -2,8 +2,6 @@ from pathlib import Path
 from typing import List, Optional, Union
 import numpy as np
 import torch
-from fairseq import utils
-from fairseq.models.roberta import RobertaHubInterface
 from torch.nn import CrossEntropyLoss
 
 from tokenizers import Tokenizer
@@ -13,6 +11,9 @@ from transformers.models.roberta import RobertaForMaskedLM
 from babyberta.utils import make_sequences
 from babyberta.dataset import DataSet
 from babyberta.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
+
+
+RobertaHubInterface = type  # this should be fairseq.RobertaHubInterface but fairseq should not be imported here
 
 
 def do_probing(save_path: Path,
@@ -82,7 +83,7 @@ def predict_open_ended(model: RobertaForMaskedLM,
 
         for x, _, mm in dataset:
             # get logits for all words in batch
-            output = model(**x)
+            output = model(**{k: v.to('cuda') for k, v in x.items()})
             logits_3d = output['logits'].detach()
 
             # get predicted words for masked locations
@@ -121,10 +122,10 @@ def predict_forced_choice(model: RobertaForMaskedLM,
 
             if not score_with_mask:
                 # get loss
-                output = model(**x)
+                output = model(**{k: v.to('cuda') for k, v in x.items()})
                 logits_3d = output['logits']
                 logits_for_all_words = logits_3d.permute(0, 2, 1)
-                labels = x.input_ids.cuda()
+                labels = x['input_ids'].cuda()
                 loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
                                 labels,  # need to be [batch size, seq length]
                                 )
@@ -132,12 +133,12 @@ def predict_forced_choice(model: RobertaForMaskedLM,
                 # compute avg cross entropy per sentence
                 # to do so, we must exclude loss for padding symbols, using attention_mask
                 cross_entropies += [loss_i[np.where(row_mask)[0]].mean().item()
-                                    for loss_i, row_mask in zip(loss, x.attention_mask.numpy())]
+                                    for loss_i, row_mask in zip(loss, x['attention_mask'].numpy())]
 
             else:  # todo test new probing method
 
-                max_token_pos = x.attention_mask.numpy().sum(axis=1).max()
-                print(x.attention_mask.numpy())
+                max_token_pos = x['attention_mask'].numpy().sum(axis=1).max()
+                print(x['attention_mask'].numpy())
                 print(max_token_pos)
                 raise NotImplementedError
                 for pos in range(max_token_pos):
@@ -162,6 +163,8 @@ def predict_forced_choice_fairseq(model: RobertaHubInterface,
                                   score_with_mask: bool,  # TODO implement
                                   verbose: bool,
                                   ):
+    from fairseq import utils
+
     res = []
     loss_fct = CrossEntropyLoss(reduction='none')
     for n, sentence in enumerate(sentences):
@@ -191,6 +194,7 @@ def predict_forced_choice_fairseq(model: RobertaHubInterface,
 def predict_open_ended_fairseq(model: RobertaHubInterface,
                                sentences: List[str],
                                ) -> List[str]:
+    from fairseq import utils
 
     res = []
     for n, sentence in enumerate(sentences):

@@ -53,64 +53,40 @@ def load_sentences_from_file(file_path: Path,
     # when lower-casing, do not lower-case upper-cased symbols
     upper_cased = set(configs.Data.roberta_symbols)
 
-    tokenized_sentences = []
-    punctuation = {'.', '?', '!'}
+    res = []
     num_too_small = 0
-    with file_path.open('r') as f:
+    with file_path.open('r') as line_by_line_file:
 
-        for line in f.readlines():
+        for sentence in line_by_line_file.readlines():
 
-            # tokenize transcript
-            transcript = line.strip().split()  # a transcript containing multiple sentences
-            transcript = [w for w in transcript]
+            if not sentence:  # during probing, parsing logic above may produce empty sentences
+                continue
 
-            # split transcript into sentences
-            tokenized_sentences_in_transcript = [[]]
-            for w in transcript:
-                tokenized_sentences_in_transcript[-1].append(w)
-                if w in punctuation:
-                    tokenized_sentences_in_transcript.append([])
+            sentence = sentence.rstrip('\n')
 
-            # collect sentences
-            for ts in tokenized_sentences_in_transcript:
+            # check  length
+            if sentence.count(' ') < configs.Data.min_sentence_length - 1 and allow_discard:
+                num_too_small += 1
+                continue
 
-                if not ts:  # during probing, parsing logic above may produce empty sentences
-                    continue
+            if not include_punctuation:
+                sentence = sentence.rstrip('.')
+                sentence = sentence.rstrip('!')
+                sentence = sentence.rstrip('?')
 
-                # check  length
-                if len(ts) < configs.Data.min_sentence_length and allow_discard:
-                    num_too_small += 1
-                    continue
-
-                # lower-case
-                ts = [w if w in upper_cased else w.lower()
-                      for w in ts]
-
-                if not include_punctuation:
-                    ts = [w for w in ts if w not in punctuation]
-
-                tokenized_sentences.append(ts)
+            res.append(sentence)
 
     if num_too_small:
         print(f'WARNING: Skipped {num_too_small:,} sentences which are shorter than {configs.Data.min_sentence_length}.')
 
-    if verbose:
-        lengths = [len(u) for u in tokenized_sentences]
-        print('Found {:,} sentences'.format(len(tokenized_sentences)))
-        print(f'Min    sentence length: {np.min(lengths):.2f}')
-        print(f'Max    sentence length: {np.max(lengths):.2f}')
-        print(f'Mean   sentence length: {np.mean(lengths):.2f}')
-        print(f'Median sentence length: {np.median(lengths):.2f}')
-
     if training_order in ['none', 'age-ordered']:
         pass
     elif training_order == 'age-reversed':
-        tokenized_sentences = tokenized_sentences[::-1]
+        res = res[::-1]
     else:
         raise AttributeError('Invalid arg to "training_order".')
 
-    sentences = [' '.join(ts) for ts in tokenized_sentences]
-    return sentences
+    return res
 
 
 def save_yaml_file(path_out: Path,

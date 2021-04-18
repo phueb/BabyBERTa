@@ -1,13 +1,15 @@
 from dataclasses import dataclass
+from typing import Tuple
 
 param2requests = {
-    'corpus_name': ['wiki-20191017-hebb-3M_tokenized', 'childes-20201026'],
+    'corpora': [
+        ('aochildes', 'aonewsela', 'wikipedia3'),
+        ('wikipedia1', 'wikipedia2', 'wikipedia3'),
+    ],
 
-    'leave_unmasked_prob': [0.1, 0.0],
-
+    'num_mask_patterns': [2],  # TODO test
 
 }
-
 
 param2debug = {
     'num_mask_patterns': 1,
@@ -22,14 +24,14 @@ param2default = {
     'include_punctuation': True,
     'allow_truncated_sentences': False,
     'training_order': 'none',  # 'age-ordered' is better for CHILDES data - must use with consecutive_masking=True
-    'num_mask_patterns': 6,  # 6 is better than lower or
+    'num_mask_patterns': 3,
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
     'leave_unmasked_prob': 0.0,  # setting this to zero makes BabyBERTa perform better than standard Roberta
     'random_token_prob': 0.1,
-    'corpus_name': 'childes-20201026',
-    'bbpe': 'c-n-w-8192',  # larger than 8k slightly reduces performance
+    'corpora': ('aochildes', 'aonewsela', 'wikipedia3'),
+    'tokenizer': 'a-a-w-w-w-8192',  # larger than 8k slightly reduces performance
     'add_prefix_space': True,  # better if True, whether to treat first token like any other token (False in GPT-2)
     'max_num_tokens_in_sequence': 128,  # unacceptable performance if lower than ~32
 
@@ -73,8 +75,8 @@ class Params:
     mask_probability: float
     leave_unmasked_prob: float
     random_token_prob: float
-    corpus_name: str
-    bbpe: str
+    corpora: Tuple[str]
+    tokenizer: str
     add_prefix_space: bool
     max_num_tokens_in_sequence: int
 

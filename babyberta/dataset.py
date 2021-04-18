@@ -270,8 +270,8 @@ class DataSet:
 
         # x
         x = {
-            'input_ids': torch.tensor(input_ids).to('cuda'),
-            'attention_mask': torch.tensor(attention_mask).to('cuda'),
+            'input_ids': torch.tensor(input_ids),
+            'attention_mask': torch.tensor(attention_mask),
         }
 
         # y
