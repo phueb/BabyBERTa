@@ -16,6 +16,7 @@ from babyberta.params import Params
 class ProbingParams:
     sample_with_replacement = False
     max_num_tokens_in_sequence = 256
+    leave_unmasked_prob_start = 0.0
     leave_unmasked_prob = 0.0
     random_token_prob = 0.0
     consecutive_masking = None
@@ -57,13 +58,14 @@ class DataSet:
         self.tokenizer = tokenizer
         self.params = params
 
+        assert 0.0 <= self.params.leave_unmasked_prob_start < 1.0
+        assert self.params.leave_unmasked_prob_start <= self.params.leave_unmasked_prob <= 1.0
+        assert 0.0 <= self.params.random_token_prob <= 1.0
+
         if not self._sequences:  # empty devel or test set, for example
             print(f'WARNING: No sequences passed to {self}.')
             self.data = None
             return
-
-        assert 0.0 <= self.params.leave_unmasked_prob <= 1.0
-        assert 0.0 <= self.params.random_token_prob <= 1.0
 
         # weights for random token replacement
         weights = np.ones(len(self.tokenizer.get_vocab()))
@@ -90,6 +92,15 @@ class DataSet:
                 random.shuffle(self.data)
         else:
             self.data = data
+
+        # make curriculum for unmasking by increasing with each batch
+        if self.params.sample_with_replacement:
+            num_batches = len(self.data) // self.params.batch_size  # may be slightly smaller than quantity below
+        else:
+            num_batches = len(list(range(0, len(self.data), self.params.batch_size)))
+        self.leave_unmasked_probabilities = iter(np.linspace(params.leave_unmasked_prob_start,
+                                                             params.leave_unmasked_prob,
+                                                             num_batches))
 
     def _gen_make_mask_patterns(self,
                                 num_tokens_after_truncation: int,
@@ -230,17 +241,18 @@ class DataSet:
             raise ValueError(f'Batch dim 1 ({batch_shape[1]}) is larger than {self.params.max_num_tokens_in_sequence}')
 
         # decide unmasking and random replacement
-        rand_or_unmask_prob = self.params.random_token_prob + self.params.leave_unmasked_prob
+        leave_unmasked_prob = next(self.leave_unmasked_probabilities)
+        rand_or_unmask_prob = self.params.random_token_prob + leave_unmasked_prob
         if rand_or_unmask_prob > 0.0:
             rand_or_unmask = mask & (np.random.rand(*batch_shape) < rand_or_unmask_prob)
             if self.params.random_token_prob == 0.0:
                 unmask = rand_or_unmask
                 rand_mask = None
-            elif self.params.leave_unmasked_prob == 0.0:
+            elif leave_unmasked_prob == 0.0:
                 unmask = None
                 rand_mask = rand_or_unmask
             else:
-                unmask_prob = self.params.leave_unmasked_prob / rand_or_unmask_prob
+                unmask_prob = leave_unmasked_prob / rand_or_unmask_prob
                 decision = np.random.rand(*batch_shape) < unmask_prob
                 unmask = rand_or_unmask & decision
                 rand_mask = rand_or_unmask & (~decision)

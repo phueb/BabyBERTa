@@ -3,11 +3,11 @@ from typing import Tuple
 
 param2requests = {
     'corpora': [
-        ('aochildes', 'aonewsela', 'wikipedia3'),
+        # ('aochildes', 'aonewsela', 'wikipedia3'),
         ('wikipedia1', 'wikipedia2', 'wikipedia3'),
     ],
 
-    'num_mask_patterns': [2],  # TODO test
+    'leave_unmasked_prob_start': [0.0, 0.1],
 
 }
 
@@ -28,7 +28,8 @@ param2default = {
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
-    'leave_unmasked_prob': 0.0,  # setting this to zero makes BabyBERTa perform better than standard Roberta
+    'leave_unmasked_prob_start': 0.0,  # better performance if no unmasking
+    'leave_unmasked_prob': 0.1,
     'random_token_prob': 0.1,
     'corpora': ('aochildes', 'aonewsela', 'wikipedia3'),
     'tokenizer': 'a-a-w-w-w-8192',  # larger than 8k slightly reduces performance
@@ -73,6 +74,7 @@ class Params:
     mask_pattern_size: int
     probabilistic_masking: bool
     mask_probability: float
+    leave_unmasked_prob_start: float
     leave_unmasked_prob: float
     random_token_prob: float
     corpora: Tuple[str]
