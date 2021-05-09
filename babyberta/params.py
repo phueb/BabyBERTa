@@ -4,16 +4,28 @@ from typing import Tuple
 param2requests = {
     'corpora': [
         # ('aochildes', 'aonewsela', 'wikipedia3'),
-        ('wikipedia1', 'wikipedia2', 'wikipedia3'),
+        # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
+        ('aochildes', 'aonewsela'),
+        ('wikipedia1', 'wikipedia2'),
     ],
 
     'leave_unmasked_prob_start': [0.0, 0.1],
 
 }
 
+# check
+if 'leave_unmasked_prob_start' in param2requests:
+    if 'num_epochs' in param2requests:
+        for num_epochs in param2requests['num_epochs']:
+            if num_epochs != 1:
+                # the curriculum for leave_unmasked_prob is WITHIN each epoch
+                raise ValueError(f'Using more than one epoch is not compatible with leave_unmasked_prob curriculum.')
+
+
 param2debug = {
     'num_mask_patterns': 1,
     'num_layers': 2,
+    'corpora': ('aochildes',),
 }
 
 param2default = {

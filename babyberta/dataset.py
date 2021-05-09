@@ -161,6 +161,13 @@ class DataSet:
             tokens = self.tokenizer.encode(s, add_special_tokens=False).tokens
             num_tokens = len(tokens)
 
+            # check that words in probing sentences are never split into sub-words
+            if isinstance(self.params, ProbingParams):
+                if num_tokens != len(s.split()):
+                    print(s)
+                    print(tokens)
+                    raise RuntimeError('Sub-tokens are not allowed in test sentences.')
+
             # exclude sequence if too many tokens
             num_tokens_and_special_symbols = num_tokens + 2
             if not self.params.allow_truncated_sentences and \
