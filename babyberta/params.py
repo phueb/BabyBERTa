@@ -6,10 +6,12 @@ param2requests = {
         # ('aochildes', 'aonewsela', 'wikipedia3'),
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
         ('aochildes', 'aonewsela'),
-        ('wikipedia1', 'wikipedia2'),
+        # ('wikipedia1', 'wikipedia2'),
     ],
 
-    'leave_unmasked_prob_start': [0.0, 0.1],
+
+    'leave_unmasked_prob_start': [0.0],
+    'tokenizer': ['a-a-w-w-w-32768', 'a-a-w-w-w-16384', 'a-a-w-w-w-8192'],
 
 }
 

@@ -10,7 +10,7 @@ from tokenizers.normalizers import Lowercase
 from babyberta import configs
 
 
-VOCAB_SIZE = 4096 * 2
+VOCAB_SIZE = 4096 * 4
 MIN_FREQUENCY = 2
 CORPUS_NAMES = ['aochildes', 'aonewsela', 'wikipedia1', 'wikipedia2', 'wikipedia3']
 ADD_PREFIX_SPACE = True
