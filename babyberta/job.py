@@ -149,7 +149,7 @@ def main(param2val):
                         print(f'{name} pp={pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
-                for sentences_path in probing_path.rglob('*.txt'):
+                for sentences_path in probing_path.rglob(f'**/{vocab_size}/*.txt'):  # task_type / vocab_size
                     do_probing(save_path, sentences_path, model, step,
                                params.include_punctuation, params.score_with_mask, tokenizer=tokenizer)
 

@@ -33,7 +33,8 @@ def do_probing(save_path: Path,
     model.eval()
 
     task_name = sentences_path.stem
-    task_type = sentences_path.parent.name
+    vocab_size = sentences_path.parent.name
+    task_type = sentences_path.parent.parent.name
 
     # load probing sentences
     print(f'Starting probing with task={task_name}', flush=True)
@@ -48,7 +49,6 @@ def do_probing(save_path: Path,
         dataset = None
 
     # prepare out path
-    vocab_size = tokenizer.get_vocab_size()
     probing_results_path = save_path / task_type / vocab_size / f'probing_{task_name}_results_{step}.txt'
     if not probing_results_path.parent.exists():
         probing_results_path.parent.mkdir(exist_ok=True, parents=True)
