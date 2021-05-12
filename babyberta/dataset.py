@@ -87,7 +87,7 @@ class DataSet:
             # 1) consecutive=true: sequences differing only in mask pattern are put in same batch.
             # 2) consecutive=false: sequences differing only in mask pattern are not put in same batch.
             # this is critical if training on data in order (e.g. age-order
-            if not self.params.consecutive_masking:  # do not remove - use consecutive masking with "age-ordered"
+            if not self.params.consecutive_masking:
                 print('WARNING: Not using consecutive masking. Training data order is ignored.')
                 random.shuffle(self.data)
         else:

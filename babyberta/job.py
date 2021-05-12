@@ -58,7 +58,7 @@ def main(param2val):
         print(f'Loaded {len(sentences_in_corpus):>12,} sentences from {corpus_name}')
         sentences += sentences_in_corpus
     all_sequences = make_sequences(sentences, params.num_sentences_per_input)
-    train_sequences, devel_sequences, test_sequences = split(all_sequences)
+    train_sequences, devel_sequences = split(all_sequences)
 
     # BabyBERTa
     print('Preparing BabyBERTa...')
@@ -85,7 +85,6 @@ def main(param2val):
 
     train_dataset = DataSet(train_sequences, tokenizer, params)
     devel_dataset = DataSet(devel_sequences, tokenizer, params)
-    test_dataset = DataSet(test_sequences, tokenizer, params)
 
     # count number of steps in training data
     max_step = len(train_dataset.data) // params.batch_size * params.num_epochs

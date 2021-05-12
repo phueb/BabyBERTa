@@ -35,32 +35,26 @@ def make_sequences(sentences: List[str],
 
 def split(data: List[str],
           seed: int = 2) -> Tuple[List[str],
-                                  List[str],
                                   List[str]]:
 
-    print(f'Splitting data into train/devel/test sets...')
+    print(f'Splitting data into train/dev sets...')
 
     random.seed(seed)
 
     train = []
     devel = []
-    test = []
 
     for i in data:
         if random.choices([True, False],
                           weights=[configs.Data.train_prob, 1 - configs.Data.train_prob])[0]:
             train.append(i)
         else:
-            if random.choices([True, False], weights=[0.5, 0.5])[0]:
-                devel.append(i)
-            else:
-                test.append(i)
+            devel.append(i)
 
     print(f'num train sequences={len(train):,}', flush=True)
     print(f'num devel sequences={len(devel):,}', flush=True)
-    print(f'num test  sequences={len(test):,}' , flush=True)
 
-    return train, devel, test
+    return train, devel
 
 
 def forward_mlm(model,
