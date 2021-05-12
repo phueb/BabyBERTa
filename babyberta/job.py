@@ -19,7 +19,7 @@ from babyberta.dataset import DataSet
 def main(param2val):
 
     assert transformers.__version__ == '4.3.3'
-    assert torch.__version__ == '1.6.0+cu101'
+    # assert torch.__version__ == '1.6.0+cu101'
 
     # params
     params = Params.from_param2val(param2val)
@@ -52,7 +52,6 @@ def main(param2val):
     for corpus_name in params.corpora:
         data_path = project_path / 'data' / 'corpora' / f'{corpus_name}.txt'
         sentences_in_corpus = load_sentences_from_file(data_path,
-                                                       training_order=params.training_order,
                                                        include_punctuation=params.include_punctuation,
                                                        allow_discard=True)
         print(f'Loaded {len(sentences_in_corpus):>12,} sentences from {corpus_name}')
@@ -87,7 +86,7 @@ def main(param2val):
     devel_dataset = DataSet(devel_sequences, tokenizer, params)
 
     # count number of steps in training data
-    max_step = len(train_dataset.data) // params.batch_size * params.num_epochs
+    max_step = train_dataset.num_batches * params.num_epochs
     print(f'max step={max_step:,}', flush=True)
 
     # optimizer + lr schedule

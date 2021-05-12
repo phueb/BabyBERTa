@@ -53,7 +53,6 @@ def main():
     logger.info("Loading data")
     data_path = configs.Dirs.corpora / 'aonewsela.txt'  # we use aonewsela for reference implementation
     sentences = load_sentences_from_file(data_path,
-                                         training_order=params.training_order,
                                          include_punctuation=params.include_punctuation,
                                          allow_discard=True)
     data_in_dict = {'text': make_sequences(sentences, params.num_sentences_per_input)}

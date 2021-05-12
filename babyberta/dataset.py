@@ -86,21 +86,23 @@ class DataSet:
             # create batches of raw (non-vectorized data) in one of two ways:
             # 1) consecutive=true: sequences differing only in mask pattern are put in same batch.
             # 2) consecutive=false: sequences differing only in mask pattern are not put in same batch.
-            # this is critical if training on data in order (e.g. age-order
+            # set to True if training on data in order
             if not self.params.consecutive_masking:
                 print('WARNING: Not using consecutive masking. Training data order is ignored.')
                 random.shuffle(self.data)
         else:
             self.data = data
 
-        # make curriculum for unmasking by increasing with each batch
+        # count num batches in data
         if self.params.sample_with_replacement:
-            num_batches = len(self.data) // self.params.batch_size  # may be slightly smaller than quantity below
+            self.num_batches = len(self.data) // self.params.batch_size  # may be slightly smaller than quantity below
         else:
-            num_batches = len(list(range(0, len(self.data), self.params.batch_size)))
+            self.num_batches = len(list(range(0, len(self.data), self.params.batch_size)))
+
+        # make curriculum for unmasking by increasing with each batch
         self.leave_unmasked_probabilities = iter(np.linspace(params.leave_unmasked_prob_start,
                                                              params.leave_unmasked_prob,
-                                                             num_batches))
+                                                             self.num_batches))
 
     def _gen_make_mask_patterns(self,
                                 num_tokens_after_truncation: int,
@@ -201,7 +203,8 @@ class DataSet:
     def _gen_data_chunks(self) -> Generator[Tuple[List[str], List[Tuple[int]]], None, None]:
         num_data = len(self.data)
 
-        # sample data with or without replacement
+        # sample data with or without replacement:
+        # set to False if training on corpus in original order
         if self.params.sample_with_replacement:
             start_ids = np.random.randint(0, num_data - self.params.batch_size, size=num_data // self.params.batch_size)
         else:
