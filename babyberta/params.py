@@ -9,9 +9,8 @@ param2requests = {
         # ('wikipedia1', 'wikipedia2'),
     ],
 
-
+    'consecutive_masking': [True, False],
     'leave_unmasked_prob_start': [0.0],
-    'tokenizer': ['a-a-w-w-w-32768', 'a-a-w-w-w-16384', 'a-a-w-w-w-8192'],
 
 }
 
@@ -37,7 +36,7 @@ param2default = {
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, 1 is best for good number-agreement
     'include_punctuation': True,
     'allow_truncated_sentences': False,
-    'training_order': 'none',  # 'age-ordered' is better for CHILDES data - must use with consecutive_masking=True
+    'training_order': 'original',  # must use consecutive_masking=True to preserve original order
     'num_mask_patterns': 3,
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,

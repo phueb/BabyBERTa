@@ -39,7 +39,7 @@ def save_forced_choice_predictions(raw_sentences: List[str],
 
 
 def load_sentences_from_file(file_path: Path,
-                             training_order: str = 'none',
+                             training_order: str = 'original',
                              include_punctuation: bool = True,
                              verbose: bool = False,
                              allow_discard: bool = False,
@@ -79,9 +79,9 @@ def load_sentences_from_file(file_path: Path,
     if num_too_small:
         print(f'WARNING: Skipped {num_too_small:,} sentences which are shorter than {configs.Data.min_sentence_length}.')
 
-    if training_order in ['none', 'age-ordered']:
+    if training_order == 'original':
         pass
-    elif training_order == 'age-reversed':
+    elif training_order == 'reversed':
         res = res[::-1]
     else:
         raise AttributeError('Invalid arg to "training_order".')
