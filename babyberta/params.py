@@ -3,13 +3,18 @@ from typing import Tuple
 
 param2requests = {
     'corpora': [
+        # ('wikipedia3', 'aonewsela', 'aochildes'),
         # ('aochildes', 'aonewsela', 'wikipedia3'),
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
-        ('aochildes', 'aonewsela'),
+        # ('aochildes', 'aonewsela'),
         # ('wikipedia1', 'wikipedia2'),
+        ('aochildes',),
+        ('aonewsela',),
+        ('wikipedia3',),
     ],
 
-    'consecutive_masking': [True, False],
+    'num_mask_patterns': [6],
+    'consecutive_masking': [False],
     'leave_unmasked_prob_start': [0.0],
 
 }
@@ -32,7 +37,7 @@ param2debug = {
 param2default = {
     # data
     'sample_with_replacement': False,  # this must be False if corpus order is to be preserved during training
-    'consecutive_masking': False,  # better dev pp when false
+    'consecutive_masking': False,  # better dev pp and grammatical accuracy when false
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, 1 is best for good number-agreement
     'include_punctuation': True,
     'allow_truncated_sentences': False,

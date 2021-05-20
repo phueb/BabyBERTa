@@ -129,6 +129,10 @@ def main(param2val):
             if step % configs.Eval.interval == 0:
                 is_evaluated_at_current_step = True
 
+                # save network weights for loading in a subsequent experiment
+                torch.save(model.state_dict(), save_path / f'model_{step:012}.pt')
+                torch.save(model.state_dict(), save_path / 'model.pt')
+
                 # pp
                 if configs.Data.train_prob < 1.0:  # if there are eval and test data
                     model.eval()
