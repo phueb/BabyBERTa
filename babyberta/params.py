@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Union
 
 param2requests = {
     'corpora': [
@@ -8,14 +8,16 @@ param2requests = {
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
         # ('aochildes', 'aonewsela'),
         # ('wikipedia1', 'wikipedia2'),
-        ('aochildes',),
+        # ('aochildes',),
         ('aonewsela',),
-        ('wikipedia3',),
+        # ('wikipedia1',),
     ],
 
     'num_mask_patterns': [6],
     'consecutive_masking': [False],
     'leave_unmasked_prob_start': [0.0],
+
+    'load_from_checkpoint': ['param_001', 'param_002', 'param_003'],
 
 }
 
@@ -64,6 +66,7 @@ param2default = {
     'score_with_mask': False,  # True to use pseudo-log-likelihoods when probing with forced-choice task, BLIMP style
 
     # model
+    'load_from_checkpoint': 'none',
     'hidden_size': 256,
     'num_layers': 8,
     'num_attention_heads': 8,
@@ -109,6 +112,7 @@ class Params:
     score_with_mask: bool
 
     # model
+    load_from_checkpoint: str
     num_layers: int
     hidden_size: int
     num_attention_heads: int

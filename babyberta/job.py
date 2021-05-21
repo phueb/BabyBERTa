@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 import torch
+import random
 
 import transformers
 from transformers.models.roberta import RobertaForMaskedLM, RobertaConfig
@@ -79,6 +80,15 @@ def main(param2val):
                            initializer_range=params.initializer_range,
                            )
     model = RobertaForMaskedLM(config=config)
+    if params.load_from_checkpoint.startswith('param'):  # load weights from previous checkpoint
+        path_tmp = Path(param2val['project_path']) / 'runs_saved' / params.load_from_checkpoint
+        print(f'Trying to load model from {path_tmp}')
+        model_files = list(path_tmp.rglob('**/saves/model.pt'))
+        print(f'Found {len(model_files)} saved models')
+        path_cpt = random.choice(model_files)
+        state_dict = torch.load(path_cpt)
+        model.load_state_dict(state_dict)
+        print(f'Loaded model from {path_cpt}')
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 

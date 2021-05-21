@@ -53,10 +53,13 @@ class DataSet:
                  tokenizer: Tokenizer,
                  params: Union[Params, ProbingParams],
                  data: Optional[List[Tuple[str, Tuple[int]]]] = None,
+                 disallow_sub_words_when_probing: bool = False,
                  ):
         self._sequences = sequences
         self.tokenizer = tokenizer
         self.params = params
+
+        self.disallow_sub_words_when_probing = disallow_sub_words_when_probing
 
         assert 0.0 <= self.params.leave_unmasked_prob_start < 1.0
         assert self.params.leave_unmasked_prob_start <= self.params.leave_unmasked_prob <= 1.0
@@ -164,7 +167,7 @@ class DataSet:
             num_tokens = len(tokens)
 
             # check that words in probing sentences are never split into sub-words
-            if isinstance(self.params, ProbingParams):
+            if self.disallow_sub_words_when_probing and isinstance(self.params, ProbingParams):
                 if num_tokens != len(s.split()):
                     print(s)
                     print(tokens)
