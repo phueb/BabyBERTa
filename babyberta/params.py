@@ -39,6 +39,7 @@ param2debug = {
 param2default = {
     # data
     'sample_with_replacement': False,  # this must be False if corpus order is to be preserved during training
+    'training_order': 'original',  # original or shuffled, use this alongside consecutive_masking=True
     'consecutive_masking': False,  # better dev pp and grammatical accuracy when false
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, 1 is best for good number-agreement
     'include_punctuation': True,
@@ -86,6 +87,7 @@ class Params:
     # data
     sample_with_replacement: bool
     consecutive_masking: bool
+    training_order: str
     num_sentences_per_input: int
     include_punctuation: bool
     allow_truncated_sentences: bool

@@ -53,6 +53,7 @@ def main(param2val):
     for corpus_name in params.corpora:
         data_path = project_path / 'data' / 'corpora' / f'{corpus_name}.txt'
         sentences_in_corpus = load_sentences_from_file(data_path,
+                                                       training_order=params.training_order,
                                                        include_punctuation=params.include_punctuation,
                                                        allow_discard=True)
         print(f'Loaded {len(sentences_in_corpus):>12,} sentences from {corpus_name}')

@@ -1,5 +1,5 @@
 import yaml
-import numpy as np
+import random
 from typing import List, Dict, Any
 from pathlib import Path
 
@@ -39,6 +39,7 @@ def save_forced_choice_predictions(raw_sentences: List[str],
 
 
 def load_sentences_from_file(file_path: Path,
+                             training_order: bool = 'original',
                              include_punctuation: bool = True,
                              allow_discard: bool = False,
                              ) -> List[str]:
@@ -74,6 +75,12 @@ def load_sentences_from_file(file_path: Path,
     if num_too_small:
         print(f'WARNING: Skipped {num_too_small:,} sentences which are shorter than {configs.Data.min_sentence_length}.')
 
+    if training_order == 'shuffled':
+        random.shuffle(res)
+    elif training_order == 'original':
+        pass
+    else:
+        raise AttributeError('Invalid arg to training_order.')
     return res
 
 
