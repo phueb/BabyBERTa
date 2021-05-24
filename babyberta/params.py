@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple, Union
+from typing import Tuple
 
 param2requests = {
     'corpora': [
@@ -8,16 +8,17 @@ param2requests = {
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
         # ('aochildes', 'aonewsela'),
         # ('wikipedia1', 'wikipedia2'),
-        # ('aochildes',),
+        ('aochildes',),
         ('aonewsela',),
-        # ('wikipedia1',),
+        ('wikipedia1',),
     ],
 
     'num_mask_patterns': [6],
     'consecutive_masking': [False],
+    'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
     'leave_unmasked_prob_start': [0.0],
 
-    'load_from_checkpoint': ['param_001', 'param_002', 'param_003'],
+    'load_from_checkpoint': ['none'],
 
 }
 
@@ -36,6 +37,7 @@ param2debug = {
     'corpora': ('aochildes',),
 }
 
+# the default model is the best model trained on just AOCHILDES, without unmasking
 param2default = {
     # data
     'sample_with_replacement': False,  # this must be False if corpus order is to be preserved during training
@@ -44,14 +46,14 @@ param2default = {
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, 1 is best for good number-agreement
     'include_punctuation': True,
     'allow_truncated_sentences': False,
-    'num_mask_patterns': 3,
+    'num_mask_patterns': 6,
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
     'leave_unmasked_prob_start': 0.0,  # better performance if no unmasking
-    'leave_unmasked_prob': 0.1,
+    'leave_unmasked_prob': 0.0,  # better performance if no unmasking
     'random_token_prob': 0.1,
-    'corpora': ('aochildes', 'aonewsela', 'wikipedia3'),
+    'corpora': ('aochildes',),
     'tokenizer': 'a-a-w-w-w-8192',  # larger than 8k slightly reduces performance
     'add_prefix_space': True,  # better if True, whether to treat first token like any other token (False in GPT-2)
     'max_num_tokens_in_sequence': 128,  # unacceptable performance if lower than ~32

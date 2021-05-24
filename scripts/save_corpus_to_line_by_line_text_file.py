@@ -14,7 +14,7 @@ from aonewsela.dataset import NewselaDataSet
 from babyberta.utils import load_wikipedia_sentences
 from babyberta import configs
 
-CORPUS_NAME = 'wikipedia3'
+CORPUS_NAME = 'aochildes'
 
 
 # load corpus
