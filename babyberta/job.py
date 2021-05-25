@@ -141,7 +141,8 @@ def main(param2val):
                 is_evaluated_at_current_step = True
 
                 # save network weights for loading in a subsequent experiment
-                torch.save(model.state_dict(), save_path / f'model_{step:012}.pt')
+                if configs.Training.keep_intermediate_checkpoints:
+                    torch.save(model.state_dict(), save_path / f'model_{step:012}.pt')
                 torch.save(model.state_dict(), save_path / 'model.pt')
 
                 # pp
@@ -168,6 +169,10 @@ def main(param2val):
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)
+                    break
+
+                if step >= configs.Training.max_step:  # useful because aochildes is bigger than aonewsela
+                    print('Reached manually set max_step. Exiting training loop', flush=True)
                     break
 
             # console
