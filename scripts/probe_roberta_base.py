@@ -20,6 +20,7 @@ for model_results_folder_name in ['huggingface_official_base', 'fairseq_official
     # load fairseq roberta base
     if model_results_folder_name.startswith('fairseq'):
         model = torch.hub.load('pytorch/fairseq', 'roberta.base')
+        model.cuda(0)
         tokenizer = None
 
     # load huggingface roberta base

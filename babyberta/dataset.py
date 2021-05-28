@@ -228,7 +228,7 @@ class DataSet:
         notes:
         - mask_patterns is based on tokens without special symbols (eos, bos), so conversion must be done
         """
-        res = np.zeros(batch_shape, dtype=np.bool)
+        res = np.zeros(batch_shape, dtype=np.bool_)
         assert batch_shape[0] == len(mask_patterns)
         for row_id, mask_pattern in enumerate(mask_patterns):
             # a mask pattern may consist of zero, one, or more than one index (of a token to be masked)
@@ -243,7 +243,7 @@ class DataSet:
                        ) -> Generator[Tuple[Dict[str, torch.tensor], Union[torch.LongTensor, None], torch.tensor],
                                       None, None]:
 
-        # collect each encoding into a single matrix (not needed before march 11, 2021)
+        # collect each encoding into a single matrix
         input_ids_raw = np.array([e.ids for e in batch_encoding])
         attention_mask = np.array([e.attention_mask for e in batch_encoding])
 

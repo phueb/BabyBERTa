@@ -20,7 +20,7 @@ from babyberta.dataset import DataSet
 def main(param2val):
 
     assert transformers.__version__ == '4.3.3'
-    # assert torch.__version__ == '1.6.0+cu101'
+    assert torch.__version__.startswith('1.6.0')
 
     # params
     params = Params.from_param2val(param2val)
