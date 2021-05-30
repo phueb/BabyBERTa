@@ -4,6 +4,9 @@ from itertools import combinations
 import numpy as np
 import pyprind
 import torch
+from collections import namedtuple
+
+from transformers.models.roberta import RobertaTokenizerFast
 
 from tokenizers import Encoding
 from tokenizers import Tokenizer
@@ -11,6 +14,35 @@ from tokenizers import Tokenizer
 
 from babyberta import configs
 from babyberta.params import Params
+
+
+def smart_tokenize(tokenizer: Union[Tokenizer, RobertaTokenizerFast],
+                   sequence: str,
+                   ) -> List[str]:
+    if isinstance(tokenizer, Tokenizer):  # e.g. auto-tokenizer used by NYU
+        tokens = tokenizer.encode(sequence, add_special_tokens=False).tokens
+    elif isinstance(tokenizer, RobertaTokenizerFast):
+        tokens = tokenizer.tokenize(sequence, add_special_tokens=False)
+    else:
+        raise AttributeError('Unknown tokenizer')
+    return tokens
+
+
+def smart_encode(tokenizer: Union[Tokenizer, RobertaTokenizerFast],
+                 sequences_in_batch: List[str],
+                 ) -> List[Encoding]:
+    if isinstance(tokenizer, Tokenizer):  # e.g. auto-tokenizer used by NYU
+        encodings = tokenizer.encode_batch(sequences_in_batch)
+    elif isinstance(tokenizer, RobertaTokenizerFast):
+        tmp = tokenizer(sequences_in_batch, padding='longest', is_split_into_words=False)
+        encodings = []
+        Encoding_ = namedtuple('Encoding', ['ids', 'attention_mask'])
+        for ids, am in zip(tmp['input_ids'], tmp['attention_mask']):
+            encodings.append(Encoding_(ids, am))
+    else:
+        raise AttributeError('Unknown tokenizer')
+
+    return encodings
 
 
 class ProbingParams:
@@ -31,7 +63,7 @@ class DataSet:
     @classmethod
     def for_probing(cls,
                     sequences: List[str],
-                    tokenizer: Tokenizer,
+                    tokenizer: Union[Tokenizer, RobertaTokenizerFast],
                     ):
         """
         returns instance when used for probing.
@@ -40,7 +72,9 @@ class DataSet:
 
         def _get_mask_pattern_from_probing_sequence(sequence: str,
                                                     ) -> Tuple[int]:
-            tokens = tokenizer.encode(sequence, add_special_tokens=False).tokens
+
+            tokens = smart_tokenize(tokenizer, sequence)
+
             res = [i for i, token in enumerate(tokens)
                    if token.endswith(configs.Data.mask_symbol)]
             return tuple(res)
@@ -50,7 +84,7 @@ class DataSet:
 
     def __init__(self,
                  sequences: List[str],
-                 tokenizer: Tokenizer,
+                 tokenizer: Union[Tokenizer, RobertaTokenizerFast],
                  params: Union[Params, ProbingParams],
                  data: Optional[List[Tuple[str, Tuple[int]]]] = None,
                  disallow_sub_words_when_probing: bool = False,
@@ -58,6 +92,8 @@ class DataSet:
         self._sequences = sequences
         self.tokenizer = tokenizer
         self.params = params
+
+        self.vocab_size = len(self.tokenizer.get_vocab())
 
         self.disallow_sub_words_when_probing = disallow_sub_words_when_probing
 
@@ -163,7 +199,7 @@ class DataSet:
         num_too_large = 0
         num_tokens_total = 0
         for s in self._sequences:
-            tokens = self.tokenizer.encode(s, add_special_tokens=False).tokens
+            tokens = smart_tokenize(self.tokenizer, s)
             num_tokens = len(tokens)
 
             # check that words in probing sentences are never split into sub-words
@@ -290,8 +326,7 @@ class DataSet:
         if rand_mask is not None:
             num_rand = rand_mask.sum()
             if num_rand > 0:
-                vocab_size = len(self.tokenizer.get_vocab())
-                input_ids[rand_mask] = np.random.choice(vocab_size, num_rand, p=self.weights)
+                input_ids[rand_mask] = np.random.choice(self.vocab_size, num_rand, p=self.weights)
 
         # x
         x = {
@@ -325,6 +360,6 @@ class DataSet:
         for sequences_in_batch, mask_patterns in self._gen_data_chunks():
 
             # before march 11, encoding returned numpy arrays
-            batch_encoding: List[Encoding] = self.tokenizer.encode_batch(sequences_in_batch)
+            batch_encoding: List[Encoding] = smart_encode(self.tokenizer, sequences_in_batch)
 
             yield from self.mask_input_ids(batch_encoding, mask_patterns)

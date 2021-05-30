@@ -4,8 +4,8 @@ Probe pre-trained roberta base models
 import torch
 import shutil
 
-
 from transformers.models.roberta import RobertaForMaskedLM
+from transformers import AutoTokenizer, AutoModelForMaskedLM
 
 from babyberta.utils import load_tokenizer
 from babyberta.probing import do_probing
@@ -13,7 +13,11 @@ from babyberta import configs
 from babyberta.io import save_yaml_file
 
 
-for model_results_folder_name in ['huggingface_official_base', 'fairseq_official_base']:
+for model_results_folder_name in [
+    'huggingface_10M_base',
+    'huggingface_official_base',
+    # 'fairseq_official_base',
+]:
 
     framework, implementation, configuration = model_results_folder_name.split('_')
 
@@ -22,6 +26,12 @@ for model_results_folder_name in ['huggingface_official_base', 'fairseq_official
         model = torch.hub.load('pytorch/fairseq', 'roberta.base')
         model.cuda(0)
         tokenizer = None
+
+    # load NYU roberta-base trained on less data
+    elif model_results_folder_name == 'huggingface_10M_base':
+        model = AutoModelForMaskedLM.from_pretrained("nyu-mll/roberta-base-10M-2")
+        model.cuda(0)
+        tokenizer = AutoTokenizer.from_pretrained("nyu-mll/roberta-base-10M-2")
 
     # load huggingface roberta base
     elif model_results_folder_name.startswith('huggingface'):

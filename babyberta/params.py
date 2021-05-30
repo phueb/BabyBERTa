@@ -3,22 +3,19 @@ from typing import Tuple
 
 param2requests = {
     'corpora': [
-        # ('wikipedia3', 'aonewsela', 'aochildes'),
-        # ('aochildes', 'aonewsela', 'wikipedia3'),
-        # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
-        # ('aochildes', 'aonewsela'),
-        # ('wikipedia1', 'wikipedia2'),
-        ('aochildes',),
-        ('aonewsela',),
-        ('wikipedia1',),
+        # ('aochildes',),
+        # ('aonewsela',),
+        # ('wikipedia1',),
+        # ('wikipedia2',),
+        ('aochildes', 'aonewsela', 'wikipedia2'),
     ],
 
     'num_mask_patterns': [6],
     'consecutive_masking': [False],
-    'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
+    'leave_unmasked_prob': [0.1],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
     'leave_unmasked_prob_start': [0.0],
 
-    'load_from_checkpoint': ['none'],
+    # 'load_from_checkpoint': ['param_001', 'param_002', 'param_003'],
 
 }
 

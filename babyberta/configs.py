@@ -28,7 +28,7 @@ class Data:
 
 class Training:
     feedback_interval = 1000
-    max_step = 160_000  # max step of aonewsela with num_mask_patterns = 6
+    max_step = 480_000  # max step of aonewsela with num_mask_patterns = 6 is 160K
     keep_intermediate_checkpoints = False
 
 
