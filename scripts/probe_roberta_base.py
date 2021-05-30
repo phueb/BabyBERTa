@@ -14,12 +14,12 @@ from babyberta.io import save_yaml_file
 
 
 for model_results_folder_name in [
-    'huggingface_10M_base',
-    'huggingface_official_base',
-    # 'fairseq_official_base',
+    'huggingface_Roberta-base_10M',
+    'huggingface_Roberta-base_160GB',
+    # 'fairseq_Roberta-base_160GB',
 ]:
 
-    framework, implementation, configuration = model_results_folder_name.split('_')
+    framework, model_size, data_size = model_results_folder_name.split('_')
 
     # load fairseq roberta base
     if model_results_folder_name.startswith('fairseq'):
@@ -28,7 +28,7 @@ for model_results_folder_name in [
         tokenizer = None
 
     # load NYU roberta-base trained on less data
-    elif model_results_folder_name == 'huggingface_10M_base':
+    elif model_results_folder_name.startswith('huggingface') and data_size == '10M':
         model = AutoModelForMaskedLM.from_pretrained("nyu-mll/roberta-base-10M-2")
         model.cuda(0)
         tokenizer = AutoTokenizer.from_pretrained("nyu-mll/roberta-base-10M-2")
@@ -68,9 +68,8 @@ for model_results_folder_name in [
     if not (path_model_results / 'param2val.yaml').exists():
         save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                        param2val={'framework': framework,
-                                  'is_official': True,
-                                  'is_reference': False,
-                                  'is_base': True,
+                                  'model_size': model_size,
+                                  'data_size': data_size,
                                   })
 
     # for each probing task
