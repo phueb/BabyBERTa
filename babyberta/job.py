@@ -48,7 +48,7 @@ def main(param2val):
     vocab_size = len(tokenizer.get_vocab())
     print(f'Vocab size={vocab_size}')
 
-    # load sentences from all three corpora
+    # load sentences from corpora
     sentences = []
     for corpus_name in params.corpora:
         data_path = project_path / 'data' / 'corpora' / f'{corpus_name}.txt'
@@ -95,6 +95,9 @@ def main(param2val):
 
     train_dataset = DataSet(train_sequences, tokenizer, params)
     devel_dataset = DataSet(devel_sequences, tokenizer, params)
+    # pre-compute batches once (otherwise StopIteration after epoch=1)
+    train_batches = [batch for batch in train_dataset]
+    devel_batches = [batch for batch in devel_dataset]
 
     # count number of steps in training data
     max_step = train_dataset.num_batches * params.num_epochs
@@ -119,7 +122,7 @@ def main(param2val):
 
     # train + eval loop
     for epoch_id in range(params.num_epochs):
-        for x, y, mm in train_dataset:
+        for x, y, mm in train_batches:
 
             if not is_first_time_in_loop:  # do not influence first evaluation by training on first batch
                 # forward
@@ -148,19 +151,17 @@ def main(param2val):
                 # pp
                 if configs.Data.train_prob < 1.0:  # if there are eval and test data
                     model.eval()
-                    for ds, name in zip([devel_dataset], ['devel']):
-                        print(f'Computing {name} pp...', flush=True)
-                        pp_sum = 0
-                        num_steps = 0
-                        for x_eval, y_eval, mm_eval in devel_dataset:
-                            loss = forward_mlm(model, mm_eval, x_eval, y_eval)
-                            pp = torch.exp(loss).detach().cpu().numpy().item()
-                            pp_sum += pp
-                            num_steps += 1
-                            model.zero_grad()
-                        pp = pp_sum / num_steps
-                        name2xy.setdefault(f'{name}_pps', []).append((step, pp))
-                        print(f'{name} pp={pp}', flush=True)
+                    pp_sum = 0
+                    num_steps = 0
+                    for x_eval, y_eval, mm_eval in devel_batches:
+                        loss = forward_mlm(model, mm_eval, x_eval, y_eval)
+                        pp = torch.exp(loss).detach().cpu().numpy().item()
+                        pp_sum += pp
+                        num_steps += 1
+                        model.zero_grad()
+                    pp = pp_sum / num_steps
+                    name2xy.setdefault(f'dev_pps', []).append((step, pp))
+                    print(f'dev pp={pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob(f'**/{vocab_size}/*.txt'):  # task_type / vocab_size
@@ -171,7 +172,7 @@ def main(param2val):
                     print('Detected last eval step. Exiting training loop', flush=True)
                     break
 
-                if step >= configs.Training.max_step:  # useful because aochildes is bigger than aonewsela
+                if configs.Training.max_step is not None and step >= configs.Training.max_step:
                     print('Reached manually set max_step. Exiting training loop', flush=True)
                     break
 

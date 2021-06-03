@@ -170,11 +170,11 @@ def predict_forced_choice_fairseq(model: RobertaHubInterface,
     loss_fct = CrossEntropyLoss(reduction='none')
     for n, sentence in enumerate(sentences):
         with torch.no_grad():
-            tokens = model.encode(sentence).cuda()
+            tokens = model.encode(sentence).long().to(device=model.device)
             if tokens.dim() == 1:
                 tokens = tokens.unsqueeze(0)
             with utils.model_eval(model.model):
-                features, _ = model.model(tokens.long().to(device=model.device),
+                features, _ = model.model(tokens,
                                           features_only=False,
                                           return_all_hiddens=False,
                                           )

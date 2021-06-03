@@ -276,8 +276,7 @@ class DataSet:
     def mask_input_ids(self,
                        batch_encoding: List[Encoding],
                        mask_patterns: List[Tuple[int]],
-                       ) -> Generator[Tuple[Dict[str, torch.tensor], Union[torch.LongTensor, None], torch.tensor],
-                                      None, None]:
+                       ) -> Tuple[Dict[str, torch.tensor], Union[torch.LongTensor, None], torch.tensor]:
 
         # collect each encoding into a single matrix
         input_ids_raw = np.array([e.ids for e in batch_encoding])
@@ -340,7 +339,7 @@ class DataSet:
         else:
             y = torch.tensor(input_ids_raw[mask]).requires_grad_(False)
 
-        yield x, y, torch.tensor(mask)
+        return x, y, torch.tensor(mask)
 
     def __iter__(self) -> Generator[Tuple[Dict[str, torch.tensor],  Union[torch.LongTensor, None], torch.tensor],
                                     None, None]:
@@ -362,4 +361,4 @@ class DataSet:
             # before march 11, encoding returned numpy arrays
             batch_encoding: List[Encoding] = smart_encode(self.tokenizer, sequences_in_batch)
 
-            yield from self.mask_input_ids(batch_encoding, mask_patterns)
+            yield self.mask_input_ids(batch_encoding, mask_patterns)

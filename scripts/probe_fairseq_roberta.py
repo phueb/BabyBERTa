@@ -23,16 +23,15 @@ from babyberta.probing import do_probing
 from babyberta.io import save_yaml_file
 from babyberta.params import Params, param2default
 
-MODEL_DATA_FOLDER_NAME = 'fairseq_official_reference'
-
-NUM_VOCAB = 8192  # used to check the length of the loaded vocab, pytorch hub models may load an unwanted vocab
+MODEL_DATA_FOLDER_NAME = 'fairseq_Roberta-base_5M'
+CHECK_FOR_REFERENCE = False
 
 
 if __name__ == '__main__':
 
     assert configs.Dirs.probing_sentences.exists()
 
-    framework, implementation, configuration = MODEL_DATA_FOLDER_NAME.split('_')
+    framework, model_size, data_size = MODEL_DATA_FOLDER_NAME.split('_')
 
     # remove previous results
     path_model_results = configs.Dirs.probing_results / MODEL_DATA_FOLDER_NAME
@@ -46,23 +45,24 @@ if __name__ == '__main__':
         rep = path_checkpoint.parent.name
 
         # load model
-        print(f'Loading model from {path_checkpoint}')
+        print(f'Loading model from {str(path_model_data / rep)}')
+        print(f'Loading checkpoint {str(path_checkpoint)}')
         model = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / rep),
                                              checkpoint_file=str(path_checkpoint),
-                                             data_name_or_path=str(path_model_data / 'data-bin'),
+                                             data_name_or_path=str(path_model_data / 'aochildes-data-bin'),
                                              )
         print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
         model.eval()
 
+        model.cuda(0)
+        print(f'model.device={model.device}')
+
         # get step
         state = load_checkpoint_to_cpu(str(path_checkpoint))
-        step = state['cfg']['model'].total_num_update
-
-        print(state['cfg']['model'])
-        # raise SystemExit
+        step = state['args'].total_num_update
 
         # check that configuration really corresponds to reference configuration
-        if configuration == 'reference':
+        if CHECK_FOR_REFERENCE:
             params = Params.from_param2val(param2default)
             assert state['cfg']['model'].max_sentences == params.batch_size
             assert state['cfg']['model'].random_token_prob == 0.1
@@ -77,10 +77,10 @@ if __name__ == '__main__':
 
         # check encoder of model
         encoder: Encoder = model.bpe.bpe
-        vocab = encoder.encoder
-        print(f'Found {len(vocab)} words in vocab')
-        if not len(vocab) == NUM_VOCAB:
-            raise RuntimeError(f'Pretrained model state dict points to vocab that is not of size={NUM_VOCAB}')
+        num_vocab = len(encoder.encoder)
+        print(f'Found {num_vocab} words in vocab')
+        if CHECK_FOR_REFERENCE and num_vocab != 8192:
+            raise RuntimeError(f'Pretrained model state dict points to vocab that is not of size=8192')
 
         # make new save_path
         save_path = path_model_results / str(rep) / 'saves'
@@ -91,9 +91,9 @@ if __name__ == '__main__':
         if not (path_model_results / 'param2val.yaml').exists():
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': framework,
-                                      'is_official': True if implementation == 'official' else False,
-                                      'is_reference': True if configuration == 'reference' else False,
-                                      'is_base': False,
+                                      'model_size': model_size,
+                                      'data_size': data_size,
+                                      'is_base': 'base' in model_size,
                                       })
 
         # for each probing task
