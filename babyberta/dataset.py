@@ -356,6 +356,9 @@ class DataSet:
         - masking
         """
 
+        if self.data is None:
+            raise RuntimeError('No data in dataset to iterate over')
+
         for sequences_in_batch, mask_patterns in self._gen_data_chunks():
 
             # before march 11, encoding returned numpy arrays

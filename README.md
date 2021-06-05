@@ -32,12 +32,11 @@ Because our goal is to work with a compact model, optimized for acquiring distri
  
 - trained on American-English child-directed speech: ~5M words vs ~30B words 
 - fewer hidden units, attention heads, and layers: ~10M parameters vs ~100M
-- smaller vocabulary: ~8K vs ~30K
+- smaller vocabulary: ~8K vs ~50K
 - masked tokens are never unmasked
-- smaller batch size: 16 vs. 256
+- smaller batch size: 16 vs. 2K
 - sentences with > 128 tokens are excluded (and never truncated)
-- fewer training steps: 160K steps (approx 5-6 epochs) vs. 500K
-- training examples are ordered by the age of the child to whom the utterance is directed to
+- fewer epochs: 1 vs. 4 (after each sequence is copied 10 times for masking, this results in 200K steps vs. 500K steps)
 - input sequences consist of 1 utterance, as opposed to multiple sentences
 
 To achieve good performance on our number agreement tasks, 

@@ -97,7 +97,7 @@ def main(param2val):
     devel_dataset = DataSet(devel_sequences, tokenizer, params)
     # pre-compute batches once (otherwise StopIteration after epoch=1)
     train_batches = [batch for batch in train_dataset]
-    devel_batches = [batch for batch in devel_dataset]
+    devel_batches = [batch for batch in devel_dataset] if devel_dataset.data else []
 
     # count number of steps in training data
     max_step = train_dataset.num_batches * params.num_epochs

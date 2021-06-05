@@ -4,7 +4,7 @@ This script writes line-by-line text files to disk.
 notes:
 - aonewsela has 446,672 sentences.
 - aochildes has 893,989 sentences
-- wikipedia1-3 has 548,947 sentences
+- wikipedia1 has 548,947 sentences
 """
 
 
