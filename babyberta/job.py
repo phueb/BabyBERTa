@@ -195,6 +195,10 @@ def main(param2val):
         s.name = name
         performance_curves.append(s)
 
+    # save
+    model.save_pretrained(save_path)
+    config.save_pretrained(save_path)
+
     print('Reached end of babyberta.job.main', flush=True)
 
     return performance_curves
