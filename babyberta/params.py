@@ -3,9 +3,9 @@ from typing import Tuple
 
 param2requests = {
     'corpora': [
-        ('aochildes',),
+        # ('aochildes',),
         ('aonewsela',),
-        ('wikipedia1',),
+        # ('wikipedia1',),
         # ('wikipedia2',),
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
         # ('aochildes', 'aonewsela', 'wikipedia3'),
@@ -14,7 +14,7 @@ param2requests = {
     'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
     'leave_unmasked_prob_start': [0.0],
 
-    # 'load_from_checkpoint': ['param_001', 'param_002', 'param_003'],
+    'load_from_checkpoint': ['param_028', 'param_034'],
 
 }
 
