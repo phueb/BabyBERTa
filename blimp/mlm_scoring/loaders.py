@@ -9,7 +9,6 @@ from pathlib import Path
 import subprocess
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Iterable, List, Optional, TextIO, Tuple
-
 import gluonnlp as nlp
 import numpy as np
 
@@ -374,8 +373,12 @@ class ScoredCorpus(OrderedDict):
         scores = [json.loads(line) for idx, line in enumerate(score_file.open('rt')) if max_utts is None or idx < max_utts]
         return ScoredCorpus.from_corpus_and_scores(corpus, scores)
 
+    def to_file(self,
+                file_path: Path,
+                scores_only: bool = False):
 
-    def to_file(self, fp: TextIO, scores_only: bool = False):
+        fp = file_path.open('w')
+
         for idx, data in self.items():
             # Either a float or a list of floats/null
             line = "{}\n".format(json.dumps(data['score']))

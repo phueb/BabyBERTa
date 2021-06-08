@@ -4,6 +4,7 @@ pandas~=0.25.1
 transformers~=4.3.3
 tokenizers~=0.10.1
 PyYAML==5.4.1
+gluonnlp~=0.8.3
 fairseq~=0.10.0
 PyPrind~=2.11.2
 datasets~=1.4.1

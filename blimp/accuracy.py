@@ -1,201 +1,147 @@
 """"
 Adapted from https://github.com/awslabs/mlm-scoring
-"""
 
+Collect pseudo-log-likelihoods collected in output/, and output summary table
+"""
+import numpy as np
 import logging
 from pathlib import Path
+import pandas as pd
+from collections import defaultdict
 
 
-import numpy as np
+paradigm2phenomenon = {
 
-anaphor_agreement = {
-    'anaphor_gender_agreement',
-    'anaphor_number_agreement'
+    'anaphor_gender_agreement': 'anaphor agreement',
+    'anaphor_number_agreement': 'anaphor agreement',
+
+    'animate_subject_passive': 'argument structure',
+    'animate_subject_trans': 'argument structure',
+    'causative': 'argument structure',
+    'drop_argument': 'argument structure',
+    'inchoative': 'argument structure',
+    'intransitive': 'argument structure',
+    'passive_1': 'argument structure',
+    'passive_2': 'argument structure',
+    'transitive': 'argument structure',
+
+    'principle_A_c_command': 'binding',
+    'principle_A_case_1': 'binding',
+    'principle_A_case_2': 'binding',
+    'principle_A_domain_1': 'binding',
+    'principle_A_domain_2': 'binding',
+    'principle_A_domain_3': 'binding',
+    'principle_A_reconstruction': 'binding',
+
+    'existential_there_object_raising': 'control/raising',
+    'existential_there_subject_raising': 'control/raising',
+    'expletive_it_object_raising': 'control/raising',
+    'tough_vs_raising_1': 'control/raising',
+    'tough_vs_raising_2': 'control/raising',
+
+    'determiner_noun_agreement_1': 'determiner-noun agreement',
+    'determiner_noun_agreement_2': 'determiner-noun agreement',
+    'determiner_noun_agreement_irregular_1': 'determiner-noun agreement',
+    'determiner_noun_agreement_irregular_2': 'determiner-noun agreement',
+    'determiner_noun_agreement_with_adjective_1': 'determiner-noun agreement',
+    'determiner_noun_agreement_with_adj_2': 'determiner-noun agreement',
+    'determiner_noun_agreement_with_adj_irregular_1': 'determiner-noun agreement',
+    'determiner_noun_agreement_with_adj_irregular_2': 'determiner-noun agreement',
+
+    'ellipsis_n_bar_1': 'ellipsis',
+    'ellipsis_n_bar_2': 'ellipsis',
+
+    'wh_questions_object_gap': 'filler-gap',
+    'wh_questions_subject_gap': 'filler-gap',
+    'wh_questions_subject_gap_long_distance': 'filler-gap',
+    'wh_vs_that_no_gap': 'filler-gap',
+    'wh_vs_that_no_gap_long_distance': 'filler-gap',
+    'wh_vs_that_with_gap': 'filler-gap',
+    'wh_vs_that_with_gap_long_distance': 'filler-gap',
+
+    'irregular_past_participle_adjectives': 'irregular forms',
+    'irregular_past_participle_verbs': 'irregular forms',
+
+    'distractor_agreement_relational_noun': 'subject-verb agreement',
+    'distractor_agreement_relative_clause': 'subject-verb agreement',
+    'irregular_plural_subject_verb_agreement_1': 'subject-verb agreement',
+    'irregular_plural_subject_verb_agreement_2': 'subject-verb agreement',
+    'regular_plural_subject_verb_agreement_1': 'subject-verb agreement',
+    'regular_plural_subject_verb_agreement_2': 'subject-verb agreement',
+
+    'existential_there_quantifiers_1': 'quantifiers',
+    'existential_there_quantifiers_2': 'quantifiers',
+    'superlative_quantifiers_1': 'quantifiers',
+    'superlative_quantifiers_2': 'quantifiers',
+
+    'matrix_question_npi_licensor_present': 'npi licensing',
+    'npi_present_1': 'npi licensing',
+    'npi_present_2': 'npi licensing',
+    'only_npi_licensor_present': 'npi licensing',
+    'only_npi_scope': 'npi licensing',
+    'sentential_negation_npi_licensor_present': 'npi licensing',
+    'sentential_negation_npi_scope': 'npi licensing',
+
+    'adjunct_island': 'island effects',
+    'complex_NP_island': 'island effects',
+    'coordinate_structure_constraint_complex_left_branch': 'island effects',
+    'coordinate_structure_constraint_object_extraction': 'island effects',
+    'left_branch_island_echo_question': 'island effects',
+    'left_branch_island_simple_question': 'island effects',
+    'sentential_subject_island': 'island effects',
+    'wh_island': 'island effects',
+
 }
-argument_structure = {
-    'animate_subject_passive',
-    'animate_subject_trans',
-    'causative',
-    'drop_argument',
-    'inchoative',
-    'intransitive',
-    'passive_1',
-    'passive_2',
-    'transitive'
-}
-binding = {
-    'principle_A_c_command',
-    'principle_A_case_1',
-    'principle_A_case_2',
-    'principle_A_domain_1',
-    'principle_A_domain_2',
-    'principle_A_domain_3',
-    'principle_A_reconstruction'
-}
-control_raising = {
-    'existential_there_object_raising',
-    'existential_there_subject_raising',
-    'expletive_it_object_raising',
-    'tough_vs_raising_1',
-    'tough_vs_raising_2'
-}
-determiner_noun_agreement = {
-    'determiner_noun_agreement_1',
-    'determiner_noun_agreement_2',
-    'determiner_noun_agreement_irregular_1',
-    'determiner_noun_agreement_irregular_2',
-    'determiner_noun_agreement_with_adjective_1',
-    'determiner_noun_agreement_with_adj_2',
-    'determiner_noun_agreement_with_adj_irregular_1',
-    'determiner_noun_agreement_with_adj_irregular_2'
-}
-ellipsis = {
-    'ellipsis_n_bar_1',
-    'ellipsis_n_bar_2'
-}
-filler_gap = {
-    'wh_questions_object_gap',
-    'wh_questions_subject_gap',
-    'wh_questions_subject_gap_long_distance',
-    'wh_vs_that_no_gap',
-    'wh_vs_that_no_gap_long_distance',
-    'wh_vs_that_with_gap',
-    'wh_vs_that_with_gap_long_distance'
-}
-irregular_forms = {
-    'irregular_past_participle_adjectives',
-    'irregular_past_participle_verbs'
-}
-island_effects = {
-    'adjunct_island',
-    'complex_NP_island',
-    'coordinate_structure_constraint_complex_left_branch',
-    'coordinate_structure_constraint_object_extraction',
-    'left_branch_island_echo_question',
-    'left_branch_island_simple_question',
-    'sentential_subject_island',
-    'wh_island'
-}
-npi_licensing = {
-    'matrix_question_npi_licensor_present',
-    'npi_present_1',
-    'npi_present_2',
-    'only_npi_licensor_present',
-    'only_npi_scope',
-    'sentential_negation_npi_licensor_present',
-    'sentential_negation_npi_scope'
-}
-quantifiers = {
-    'existential_there_quantifiers_1',
-    'existential_there_quantifiers_2',
-    'superlative_quantifiers_1',
-    'superlative_quantifiers_2'
-}
-subject_verb_agreement = {
-    'distractor_agreement_relational_noun',
-    'distractor_agreement_relative_clause',
-    'irregular_plural_subject_verb_agreement_1',
-    'irregular_plural_subject_verb_agreement_2',
-    'regular_plural_subject_verb_agreement_1',
-    'regular_plural_subject_verb_agreement_2'
-}
+phenomena = set([v for v in paradigm2phenomenon.values()])
+phenomenon2paradigms = {phenomenon: [pa for pa, ph in paradigm2phenomenon.items() if ph == phenomenon]
+                        for phenomenon in phenomena}
 
 
 if __name__ == '__main__':
 
-    for model_dir in Path('output').glob('babyberta_*'):
+    phenomenon2col = defaultdict(list)
 
-        anaphor_agreement_list = []
-        argument_structure_list = []
-        binding_list = []
-        control_raising_list = []
-        determiner_noun_agreement_list = []
-        ellipsis_list = []
-        filler_gap_list = []
-        irregular_forms_list = []
-        island_effects_list = []
-        npi_licensing_list = []
-        quantifiers_list = []
-        subject_verb_agreement_list = []
+    for model_dir in Path('output').glob('*'):
 
         model_name = model_dir.name
         print('********************************')
         print(model_name)
         print('********************************')
 
+        phenomenon2col['Model'].append(model_name.replace('_', '+'))
+
         base_dir = Path('output') / model_name
 
-        num_files = 0
+        for phenomenon, paradigms in phenomenon2paradigms.items():
 
-        for file in sorted(base_dir.glob('*.lm.json')):
+            accuracies = []
+            for paradigm in paradigms:
+                file = base_dir / f'{paradigm}.txt'
+                with file.open('rt') as f:
+                    scores = f.readlines()
+                num_pairs = len(scores) // 2
 
-            with file.open('rt') as f:
-                scores = f.readlines()
-            num_pairs = len(scores) // 2
+                # compute accuracy for paradigm
+                count = 0
+                for i in range(num_pairs):
+                    if float(scores[2*i]) > float(scores[2*i+1]):
+                        count += 1
+                if len(scores) == 0:
+                    logging.error("{} is empty, skipping".format(file))
+                    continue
+                assert num_pairs == 1000
+                acc = count / num_pairs
+                accuracies.append(acc)
 
-            # Count # times good triumphed over evil
-            count = 0
-            for i in range(num_pairs):
-                if float(scores[2*i]) > float(scores[2*i+1]):
-                    count += 1
-            # Remove .lm.json
-            uid = file.name.split('.')[0]
+            # collect
+            phenomenon_rotated = '\rot{' + phenomenon.capitalize() + '}'
+            phenomenon2col[phenomenon_rotated].append(np.mean(accuracies))
+            # Since all 67 classes have 1000 pairs, per-class and overall accuracies are the desired (micro)averages
 
-            if len(scores) == 0:
-                logging.error("{} is empty, skipping".format(file))
-                continue
-            assert num_pairs == 1000
+    df = pd.DataFrame(data=phenomenon2col)
+    df['Overall'] = df.mean(axis=1)
+    print(df.round(2).to_latex(index=False, bold_rows=True, escape=False))
 
-            acc = count / num_pairs
-            print("{:.3f} ({}/{}) - {}".format(acc, count, num_pairs, uid))
-            if uid in anaphor_agreement:
-                anaphor_agreement_list.append(acc)
-            elif uid in argument_structure:
-                argument_structure_list.append(acc)
-            elif uid in binding:
-                binding_list.append(acc)
-            elif uid in control_raising:
-                control_raising_list.append(acc)
-            elif uid in determiner_noun_agreement:
-                determiner_noun_agreement_list.append(acc)
-            elif uid in ellipsis:
-                ellipsis_list.append(acc)
-            elif uid in filler_gap:
-                filler_gap_list.append(acc)
-            elif uid in irregular_forms:
-                irregular_forms_list.append(acc)
-            elif uid in island_effects:
-                island_effects_list.append(acc)
-            elif uid in npi_licensing:
-                npi_licensing_list.append(acc)
-            elif uid in quantifiers:
-                quantifiers_list.append(acc)
-            elif uid in subject_verb_agreement:
-                subject_verb_agreement_list.append(acc)
-            else:
-                logging.error("Unrecognized UID: {}".format(uid))
-            num_files += 1
-
-        print("# of files: {}".format(num_files))
-
-        # Since all 67 classes have 1000 pairs, per-class and overall accuracies are the desired (micro)averages
-
-        print("anaphor_agreement: ", np.mean(anaphor_agreement_list))
-        print("argument_structure: ", np.mean(argument_structure_list))
-        print("binding: ", np.mean(binding_list))
-        print("control_raising: ", np.mean(control_raising_list))
-        print("determiner: ", np.mean(determiner_noun_agreement_list))
-        print("ellipsis: ", np.mean(ellipsis_list))
-        print('filler_gap: ', np.mean(filler_gap_list))
-        print('irregular_forms: ', np.mean(irregular_forms_list))
-        print('island_effects: ', np.mean(island_effects_list))
-        print('npi_licensing: ', np.mean(npi_licensing_list))
-        print('quantifiers: ', np.mean(quantifiers_list))
-        print('subject_verb_agreement: ', np.mean(subject_verb_agreement_list))
-
-        lists = anaphor_agreement_list + argument_structure_list + binding_list + control_raising_list + determiner_noun_agreement_list + ellipsis_list + filler_gap_list + irregular_forms_list + island_effects_list + npi_licensing_list + quantifiers_list + subject_verb_agreement_list
-
-        assert len(lists) == num_files
-
-        print(model_name)
-        print("overall: ", np.mean(lists))
+    print()
+    for model_name, overall_acc in zip(df['Model'], df['Overall'].round(2)):
+        print(f'{model_name:<22} {overall_acc}')

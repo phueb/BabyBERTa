@@ -42,7 +42,6 @@ if __name__ == '__main__':
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': 'huggingface',
                                       'is_official': True,
-                                      'is_reference': True,
                                       'is_base': False,
                                       })
 

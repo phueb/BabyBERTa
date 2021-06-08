@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     path_model_data = configs.Dirs.root / 'fairseq_models' / MODEL_DATA_FOLDER_NAME
 
-    for path_checkpoint in path_model_data.rglob('checkpoint_last.pt'):
+    for path_checkpoint in path_model_data.rglob('checkpoint_best.pt'):
 
         rep = path_checkpoint.parent.name
 

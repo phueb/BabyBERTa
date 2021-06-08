@@ -4,10 +4,11 @@ Adapted from https://github.com/awslabs/mlm-scoring
 
 import logging
 from abc import ABC
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 import numpy as np
 
 import tokenizers  # ph
+from transformers.models.roberta import RobertaTokenizerFast
 
 # MXNet-based
 import gluonnlp as nlp
@@ -30,7 +31,8 @@ class BaseScorer(ABC):
     def __init__(self,
                  model: Block,
                  vocab: nlp.Vocab,
-                 tokenizer, ctxs: List[mx.Context],
+                 tokenizer: Union[tokenizers.Tokenizer, RobertaTokenizerFast],
+                 ctxs: List[mx.Context],
                  eos: Optional[bool] = None,
                  capitalize: Optional[bool] = None,
                  ) -> None:
@@ -42,19 +44,29 @@ class BaseScorer(ABC):
         self._capitalize = capitalize
         self._max_length = 1024
 
-        # ph: use tokenizers library
-        self._tokenizer: tokenizers.Tokenizer
-        self._tokenizer.mask_token = '<mask>'
-        self._tokenizer.pad_token = '<pad>'
-        self._tokenizer.unk_token = '<unk>'
-        self._tokenizer._convert_token_to_id = self._tokenizer.token_to_id
+        # ph: use model class for tokenization for fairseq models
+        if tokenizer is None:
+            raise NotImplementedError('fairseq Roberta model does not use tokenizer.')
 
-    def _apply_tokenizer_opts(self, sent: str) -> str:
-        if self._eos:
-            sent += '.'
-        if self._capitalize:
-            sent = sent.capitalize()
-        return sent
+        # ph: use tokenizers library for BabyBERTa
+        elif isinstance(self._tokenizer, tokenizers.Tokenizer):
+            self._tokenizer: tokenizers.Tokenizer
+            self._tokenizer.mask_token = '<mask>'
+            self._tokenizer.pad_token = '<pad>'
+            self._tokenizer.unk_token = '<unk>'
+            self.mask_token_id = self._tokenizer.token_to_id(self._tokenizer.mask_token)
+            self.pad_token_id = self._tokenizer.token_to_id(self._tokenizer.pad_token)
+
+            self.get_token_ids = lambda sentence: np.array(self._tokenizer.encode(
+                sentence, add_special_tokens=True).ids)
+
+        # ph: use roberta tokenizer for huggingface models
+        else:
+            self._tokenizer: RobertaTokenizerFast
+            self.mask_token_id = self._tokenizer.mask_token_id
+            self.pad_token_id = self._tokenizer.pad_token_id
+
+            self.get_token_ids = lambda sentence: np.array(self._tokenizer.encode(sentence, add_special_tokens=True))
 
     @staticmethod
     def _check_support(model) -> bool:
@@ -99,8 +111,14 @@ class BaseScorer(ABC):
             *[mx.gluon.utils.split_data(batch_compo, len(self._ctxs), batch_axis=0, even_split=False) for batch_compo in
               batch])
 
-    def score(self, corpus: Corpus, temp: float = 1.0, split_size: int = 2000, ratio: float = 1, num_workers: int = 10,
-              per_token: bool = False) -> List[float]:
+    def score(self,
+              corpus: Corpus,
+              temp: float = 1.0,
+              split_size: int = 2000,
+              ratio: float = 1,
+              num_workers: int = 10,
+              per_token: bool = False,
+              ) -> List[float]:
 
         ctx_cpu = mx.Context('cpu')
 
@@ -215,11 +233,9 @@ class MLMScorerPT(BaseScorer):
         # We don't mask the [CLS], [SEP] for now for PLL
         mask_indices = mask_indices[1:-1]
 
-        mask_token_id = self._tokenizer._convert_token_to_id(self._tokenizer.mask_token)
-
         for mask_set in mask_indices:
             token_ids_masked = token_ids.copy()
-            token_ids_masked[mask_set] = mask_token_id
+            token_ids_masked[mask_set] = self.mask_token_id
 
             if self._wwm:
                 raise NotImplementedError
@@ -233,11 +249,9 @@ class MLMScorerPT(BaseScorer):
         sents_expanded = []
 
         for sent_idx, sent in enumerate(corpus.values()):
-            sent = self._apply_tokenizer_opts(sent)
 
             # ph
-            ids_original = np.array(self._tokenizer.encode(sent, add_special_tokens=True).ids)
-            # ids_original = np.array(self._tokenizer.encode(sent, add_special_tokens=True))
+            ids_original = self.get_token_ids(sent)
 
             # Enforce max length
             if len(ids_original) > self._max_length:
@@ -254,11 +268,15 @@ class MLMScorerPT(BaseScorer):
                     ids_original[mask_set],
                     1)
                     for ids, mask_set in ids_masked]
-                # print([self._tokenizer.convert_ids_to_tokens(sent[1]) for sent in sents_expanded[:3] + sents_expanded[-3:]])
 
         return SimpleDataset(sents_expanded)
 
-    def score(self, corpus: Corpus, temp: float = 1.0, split_size: int = 2000, ratio: float = 0,
+    def score(self,
+              corpus: Corpus,
+              temp: float = 1.0,
+              split_size: int = 2000,
+              ratio: float = 0,
+              num_workers: int = 10,
               per_token: bool = False) -> List[float]:
 
         assert temp == 1.0
@@ -269,7 +287,7 @@ class MLMScorerPT(BaseScorer):
         # Turn Dataset into Dataloader
         batchify_fn = btf_generic.Tuple(btf_generic.Stack(dtype='int32'),
                                         btf_generic.Pad(
-                                            pad_val=self._tokenizer._convert_token_to_id(self._tokenizer.pad_token),
+                                            pad_val=self.pad_token_id,
                                             dtype='long'),
                                         btf_generic.Stack(dtype='long'), btf_generic.Stack(dtype='long'),
                                         btf_generic.Stack(dtype='long'), btf_generic.Stack(dtype='long'))
@@ -284,7 +302,6 @@ class MLMScorerPT(BaseScorer):
 
         logging.info(batch_sampler.stats())
 
-        # dataloader = nlp.data.ShardedDataLoader(dataset, pin_memory=True, batch_sampler=batch_sampler, batchify_fn=batchify_fn, num_workers=num_workers, thread_pool=True)
         dataloader = nlp.data.ShardedDataLoader(dataset, batch_sampler=batch_sampler, batchify_fn=batchify_fn)
 
         # Compute sum (assumes dataset is in order)

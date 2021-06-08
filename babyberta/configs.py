@@ -4,6 +4,7 @@ from pathlib import Path
 class Dirs:
     root = Path(__file__).parent.parent
     data = root / 'data'
+    blimp = root / 'blimp'
     corpora = data / 'corpora'
     tokenizers = data / 'tokenizers'
 
