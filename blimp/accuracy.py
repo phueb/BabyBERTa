@@ -108,7 +108,7 @@ if __name__ == '__main__':
         print(model_name)
         print('********************************')
 
-        phenomenon2col['Model'].append(model_name.replace('_', '+'))
+        phenomenon2col['Model'].append('+' + model_name.split('_')[-1])
 
         base_dir = Path('output') / model_name
 
@@ -131,17 +131,17 @@ if __name__ == '__main__':
                     continue
                 assert num_pairs == 1000
                 acc = count / num_pairs
-                accuracies.append(acc)
+                accuracies.append(acc * 100)
 
             # collect
-            phenomenon_rotated = '\rot{' + phenomenon.capitalize() + '}'
+            phenomenon_rotated = '\rot{' + phenomenon.capitalize() + '}'  # /rot{} is a custom latex command
             phenomenon2col[phenomenon_rotated].append(np.mean(accuracies))
             # Since all 67 classes have 1000 pairs, per-class and overall accuracies are the desired (micro)averages
 
     df = pd.DataFrame(data=phenomenon2col)
-    df['Overall'] = df.mean(axis=1)
-    print(df.round(2).to_latex(index=False, bold_rows=True, escape=False))
+    print(df.round(1).to_latex(index=False, bold_rows=True, escape=False))
 
     print()
+    df['Overall'] = df.mean(axis=1)
     for model_name, overall_acc in zip(df['Model'], df['Overall'].round(2)):
         print(f'{model_name:<22} {overall_acc}')

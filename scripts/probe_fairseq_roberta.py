@@ -1,17 +1,7 @@
 """
 Probe roberta models trained in fairseq in the same way that BabyBERTa is probed.
 
-To guarantee the correct vocab is loaded, modify cfg in fairseq.fairseq.checkpoint_utils by adding:
-
-from fairseq.dataclass.utils import overwrite_args_by_name
-new_bpe_cfg = {
-'_name': 'gpt2',
-'gpt2_encoder_json': '/home/ph/BabyBERTa/pretrained_models/roberta-feb25/checkpoints/vocab.json',
-'gpt2_vocab_bpe': '/home/ph/BabyBERTa/pretrained_models/roberta-feb25/checkpoints/merges.txt',
-}
-overrides = {'bpe': new_bpe_cfg}
-overwrite_args_by_name(cfg, overrides)
-print(cfg['bpe'])
+We found better performance on grammatical accuracy when training Roberta-base with smaller batch size, 256.
 """
 import shutil
 from fairseq.models.roberta import RobertaModel
@@ -21,10 +11,11 @@ from fairseq.checkpoint_utils import load_checkpoint_to_cpu
 from babyberta import configs
 from babyberta.probing import do_probing
 from babyberta.io import save_yaml_file
-from babyberta.params import Params, param2default
+
 
 MODEL_DATA_FOLDER_NAME = 'fairseq_Roberta-base_5M'
-CHECK_FOR_REFERENCE = False
+
+LAST_OR_BEST = 'last'  # last is better than best
 
 
 if __name__ == '__main__':
@@ -40,7 +31,7 @@ if __name__ == '__main__':
 
     path_model_data = configs.Dirs.root / 'fairseq_models' / MODEL_DATA_FOLDER_NAME
 
-    for path_checkpoint in path_model_data.rglob('checkpoint_best.pt'):
+    for path_checkpoint in path_model_data.rglob(f'checkpoint_{LAST_OR_BEST}.pt'):
 
         rep = path_checkpoint.parent.name
 
@@ -61,26 +52,10 @@ if __name__ == '__main__':
         state = load_checkpoint_to_cpu(str(path_checkpoint))
         step = state['args'].total_num_update
 
-        # check that configuration really corresponds to reference configuration
-        if CHECK_FOR_REFERENCE:
-            params = Params.from_param2val(param2default)
-            assert state['cfg']['model'].max_sentences == params.batch_size
-            assert state['cfg']['model'].random_token_prob == 0.1
-            assert state['cfg']['model'].leave_unmasked_prob == 0.1
-            assert state['cfg']['model'].mask_prob == params.mask_probability
-            # assert state['cfg']['model'].sample_break_mode == 'eos'  # TODO verify this
-            assert state['cfg']['model'].encoder_attention_heads == params.num_attention_heads
-            assert state['cfg']['model'].encoder_embed_dim == params.hidden_size
-            assert state['cfg']['model'].encoder_ffn_embed_dim == params.intermediate_size
-            assert state['cfg']['model'].encoder_layers == params.num_layers
-            assert state['cfg']['model'].lr == [params.lr]
-
         # check encoder of model
         encoder: Encoder = model.bpe.bpe
         num_vocab = len(encoder.encoder)
         print(f'Found {num_vocab} words in vocab')
-        if CHECK_FOR_REFERENCE and num_vocab != 8192:
-            raise RuntimeError(f'Pretrained model state dict points to vocab that is not of size=8192')
 
         # make new save_path
         save_path = path_model_results / str(rep) / 'saves'

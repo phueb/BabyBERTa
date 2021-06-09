@@ -2,18 +2,18 @@ import shutil
 from pathlib import Path
 
 from transformers.models.roberta import RobertaForMaskedLM
+from transformers import AutoTokenizer, AutoModelForMaskedLM
 from tokenizers import Tokenizer
 from tokenizers.processors import TemplateProcessing
-from transformers import AutoTokenizer, AutoModelForMaskedLM
 
 from fairseq.models.roberta import RobertaModel
 
-from main import score_model_on_paradigm
+from mlm_scoring.scoring import score_model_on_paradigm
 from babyberta import configs
 
 model_names = [p.name for p in (configs.Dirs.blimp / 'saved_models').glob('*')]
 model_names.append('RoBERTa-base_10M')  # trained by Warstadt et al., 2020
-model_names.append('RoBERTa-base_AO-CHILDES')  # trained by us using fairseq
+model_names.append('RoBERTa-base_AO-CHILDES')  # trained by us using fairseq  # TODO not implemented
 
 path_out = Path('output')
 
@@ -54,7 +54,7 @@ for model_name in model_names:
     elif model_name == 'RoBERTa-base_AO-CHILDES':
         path_model_data = configs.Dirs.root / 'fairseq_models' / 'fairseq_Roberta-base_5M'
         model = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / '0'),
-                                             checkpoint_file=str(path_model_data / 'checkpoint_best.pt'),
+                                             checkpoint_file=str(path_model_data / '0' / 'checkpoint_best.pt'),
                                              data_name_or_path=str(path_model_data / 'aochildes-data-bin'),
                                              )
         print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')

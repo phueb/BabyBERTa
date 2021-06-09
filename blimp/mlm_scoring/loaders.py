@@ -2,12 +2,8 @@
 Adapted from https://github.com/awslabs/mlm-scoring
 """
 from collections import defaultdict, OrderedDict
-import html
 import json
-import logging
 from pathlib import Path
-import subprocess
-from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Iterable, List, Optional, TextIO, Tuple
 import gluonnlp as nlp
 import numpy as np
@@ -23,7 +19,6 @@ class Hypotheses():
         self.tokenizer = tokenizer
         self._vocab = vocab
 
-
     def _generate_ln(self, alpha=0.6, tokenizer=None, ln_type='gnmt'):
         self.sent_lens = np.zeros(shape=(len(self.sents),))
         for idx, sent in enumerate(self.sents):
@@ -36,91 +31,33 @@ class Hypotheses():
         return self.sent_lens
 
 
-    def rescore(self, hyps_list: List[Any], scales: List[float], ln=None, ln_type=None) -> Any:
-        """This implements rescoring as:
-        s_final = (1-scale)*s_orig + scale*s_new
-
-        Args:
-            new_scores (TYPE): List of list of new scores
-            scales (float, optional): Scale to apply to each list of new scores
-
-        Returns:
-            TYPE: Description
-        """
-
-        scale_total = 0.0
-        final_scores = np.zeros((len(self.scores),))
-        length_penalties = np.ones((len(self.scores), len(hyps_list)))
-        if ln is not None:
-            for idx, hyps in enumerate(hyps_list):
-                length_penalties[:,idx] = self._generate_ln(alpha=ln, ln_type=ln_type, tokenizer=hyps.tokenizer)
-        for idx, (hyps, scale) in enumerate(zip(hyps_list, scales)):
-            scale_total += scale
-            final_scores += scale*(np.array(hyps.scores) / length_penalties[:,idx])
-        final_scores += np.array(self.scores)
-
-        new_idxs = (-final_scores).argsort()
-        # Reindex and create a new hypotheses object
-        return Hypotheses([self.sents[i] for i in new_idxs], [final_scores[i] for i in new_idxs])
-
-
-
 class Corpus(OrderedDict):
     """A ground truth corpus (dictionary of ref sentences)
     """
 
     @classmethod
     def from_file(cls, fp: TextIO, **kwargs) -> Any:
-        if Path(fp.name).suffix == '.json':
-            # A ESPNet JSON file with hypotheses and reference
-            obj_dict = json.load(fp)
-            return cls.from_dict(obj_dict, **kwargs)
-        else:
-            # A text file (probably LM training data per line)
-            return Corpus.from_text(fp, **kwargs)
-
+        # A text file (probably LM training data per line)
+        return Corpus.from_text(fp, **kwargs)
 
     @classmethod
-    def from_dict(cls, obj_dict: Dict[str, Dict[str, Any]], max_utts: int = None) -> Any:
-        """Loads reference texts from the format of Shin et al. (JSON)
-        
-        Args:
-            fp (TextIO): JSON file object
-        """
-
-        # Just a dictionary for now
-        # but equipped with this factory method
-        corpus = cls()
-
-        item_list = sorted(obj_dict.items())
-        if max_utts is not None:
-            item_list = item_list[:max_utts]
-        for utt_id, hyps_dict in item_list:
-            # hyps_dict key-values look like:
-            # 'ref': "mister quilter is the apostle of the middle classes and we are glad to welcome his gospel"
-            # 'hyp_100' {'score': -10.107752799987793, 'text': ' mister quillter is the apostle of the middle classes and weir glad to welcome his gospel'}
-            corpus[utt_id] = hyps_dict['ref'].strip()
-
-        return corpus
-
-
-    @classmethod
-    def from_text(cls, fp: Iterable[str], max_utts=None):
+    def from_text(cls, fp: Iterable[str], max_utts=None, lower_case=True):
         corpus = cls()
         # For text files, utterance ID is just the zero-indexed line number
         idx = 0
         for line in fp:
             if max_utts is not None and idx >= max_utts:
                 break
-            corpus[idx] = line.strip()
+            if lower_case:
+                corpus[idx] = line.strip().lower()  # ph: lower-case
+            else:
+                corpus[idx] = line.strip()
+
             idx += 1
         return corpus
 
-
-    # TODO: WORK ON THIS
     def _get_num_words_in_utt(self, utt: str) -> int:
         return len(utt.split(' '))
-
 
     def get_num_words(self) -> Tuple[List[int], int]:
 
@@ -134,69 +71,6 @@ class Corpus(OrderedDict):
                 max_words_per_utt = num_words
 
         return num_words_list, max_words_per_utt
-
-
-    @staticmethod
-    def _edit_distance(a: str, b: str) -> int:
-
-        s1 = a.split(' ')
-        s2 = b.split(' ')
-
-        # Implementation is from:
-        # https://stackoverflow.com/a/32558749
-        if len(s1) > len(s2):
-            s1, s2 = s2, s1
-
-        distances = range(len(s1) + 1)
-        for i2, c2 in enumerate(s2):
-            distances_ = [i2+1]
-            for i1, c1 in enumerate(s1):
-                if c1 == c2:
-                    distances_.append(distances[i1])
-                else:
-                    distances_.append(1 + min((distances[i1], distances[i1 + 1], distances_[-1])))
-            distances = distances_
-        return distances[-1]
-
-
-    @staticmethod
-    def _word_len(sent: str) -> None:
-        raise NotImplementedError
-
-
-    def wer_score(self, preds: Any) -> float:
-        edit_dist = 0.0
-        num_ref_words = 0.0
-        # TODO: Here we aggregate all edits and then 
-        for utt_id, hyps in preds.items():
-            pred_sent = hyps.sents[0]
-            edit_dist += self._edit_distance(pred_sent, self[utt_id])
-            num_ref_words += self._get_num_words_in_utt(self[utt_id])
-        return edit_dist / num_ref_words
-
-
-    def mbleu_score(self, preds: Any):
-        logging.warning("Note: we escape tokens in the reference.")
-        with NamedTemporaryFile('wt') as fp_ref, NamedTemporaryFile('wt') as fp_hyp:
-            for utt_id, hyps in preds.items():
-                ref = self[utt_id]
-                fp_ref.write(html.unescape(ref) + '\n')
-
-                hyp = hyps.sents[0]
-                fp_hyp.write(html.unescape(hyp) + '\n')
-
-            fp_ref.flush()
-            fp_hyp.flush()
-            logging.warning("Hypothesis file written to '{}'".format(fp_hyp.name))
-            logging.warning("Example:\nref: {}\nhyp: {}".format(ref, hyp))
-
-            import sacrebleu
-            # mbleu_output = subprocess.check_output("sacrebleu {} < {}".format(fp_ref.name, fp_hyp.name), shell=True)
-            mbleu_output = subprocess.check_output("perl multi-bleu.perl {} < {}".format(fp_ref.name, fp_hyp.name), shell=True)
-            logging.warning(mbleu_output)
-
-        # TODO: Return the BLEU score
-        return None
 
 
 class Predictions(OrderedDict):
@@ -213,11 +87,8 @@ class Predictions(OrderedDict):
         if suffix == '.json':
             obj_dict = json.load(fp)
             return cls.from_dict(obj_dict, **kwargs)
-        elif suffix == '.nobpe':
-            return cls.from_nmt(fp, **kwargs)
         else:
             raise ValueError("Hypothesis file of type '{}' is not supported".format(suffix))
-
 
     @classmethod
     def from_dict(cls, obj_dict: Dict[str, Dict[str, Any]], max_utts: Optional[int] = None, vocab: Optional[nlp.Vocab] = None, tokenizer = None):
@@ -248,9 +119,6 @@ class Predictions(OrderedDict):
 
             sents = [None]*num_hyps
             scores = [None]*num_hyps
-            # hyps_dict key-values look like:
-            # 'ref': "mister quilter is the apostle of the middle classes and we are glad to welcome his gospel"
-            # 'hyp_100' {'score': -10.107752799987793, 'text': ' mister quillter is the apostle of the middle classes and weir glad to welcome his gospel'}
             for hyp_id, hyp_data in hyps_dict.items():
                 if not hyp_id.startswith('hyp_'):
                     continue
@@ -264,61 +132,6 @@ class Predictions(OrderedDict):
 
         return preds
 
-
-    @classmethod
-    def from_nmt(cls, fp: TextIO, max_utts=None, vocab=None, tokenizer=None):
-        """Loads hypotheses from Toan's NMT beam output format
-
-        Args:
-            fp (TextIO): .nobpe filename
-            max_utts (None, optional): Number of utterances to process
-            vocab (None, optional): Vocabulary
-
-        Returns:
-            Predictions: Initialized predictions object
-        """
-
-        # Just a dictionary for now
-        # but equipped with this factory method
-        preds = cls()
-
-        pair_idx = 0
-        sents = []
-        scores = []
-        # TODO: Assumes newline at the end
-        for line_idx, line in enumerate(fp):
-            if max_utts is not None and max_utts <= pair_idx:
-                break
-            line = line.strip()
-            if line == '':
-                hyps = Hypotheses(sents, scores, vocab, tokenizer)
-                preds[pair_idx] = hyps
-                pair_idx += 1
-                sents = []
-                scores = []
-                continue
-
-            line_parts = line.split()
-            neg_log_prob = float(line_parts[-1])
-
-            # TEMPORARY: FOR CATCHING IMPROPER PROCESSING, e.g. ... gedi-25.58
-            neg_log_prob_ln_str = line_parts[-2]
-            str_parts = neg_log_prob_ln_str.split('-')
-            # Were they adjoined?
-            if len(str_parts[0]) > 0:
-                neg_log_prob_ln_str = '-' + str_parts[-1]
-                # logging.warning("Line {}: LN score '{}' was found, treating as '{}'".format(line_idx+1, line_parts[-2], neg_log_prob_ln_str))
-            neg_log_prob_ln = float(neg_log_prob_ln_str)
-
-            hyp = ' '.join(line_parts[:-2])
-
-            sents.append(hyp)
-            scores.append(neg_log_prob_ln)
-
-        return preds
-
-
-
     def to_corpus(self) -> Corpus:
 
         corpus = Corpus()
@@ -327,7 +140,6 @@ class Predictions(OrderedDict):
                 corpus["{}{}{}".format(utt_id, self.SEPARATOR, idx+1)] = sent
 
         return corpus
-
 
     def to_json(self, fp: TextIO):
 
@@ -348,14 +160,12 @@ class Predictions(OrderedDict):
 
 class ScoredCorpus(OrderedDict):
 
-
     @classmethod
     def from_corpus_and_scores(cls, corpus: Corpus, scores: List[float]) -> OrderedDict:
         scored_corpus = ScoredCorpus()
         for (idx, text), score in zip(corpus.items(), scores):
             scored_corpus[idx] = {'score': score, 'text': text}
         return scored_corpus
-
 
     @classmethod
     def from_files(cls, corpus_file: Path, score_file: Path, max_utts: Optional[int] = None) -> OrderedDict:
@@ -385,7 +195,6 @@ class ScoredCorpus(OrderedDict):
             if not scores_only:
                 line = "{} ".format(data['text']) + line
             fp.write(line)
-
 
     def to_predictions(self) -> OrderedDict: 
 

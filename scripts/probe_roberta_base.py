@@ -15,8 +15,8 @@ from babyberta.io import save_yaml_file
 
 for model_results_folder_name in [
     'huggingface_Roberta-base_10M',
-    'huggingface_Roberta-base_160GB',
-    # 'fairseq_Roberta-base_160GB',
+    'huggingface_Roberta-base_30B',
+    # 'fairseq_Roberta-base_30B',
 ]:
 
     framework, model_size, data_size = model_results_folder_name.split('_')

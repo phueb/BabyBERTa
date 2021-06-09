@@ -11,8 +11,6 @@ param2requests = {
         ('aochildes', 'aonewsela', 'wikipedia3'),
     ],
 
-    'num_mask_patterns': [3],  # TODO
-
     'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
     'leave_unmasked_prob_start': [0.0],
 
@@ -44,7 +42,7 @@ param2default = {
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, 1 is best for good number-agreement
     'include_punctuation': True,
     'allow_truncated_sentences': False,
-    'num_mask_patterns': 10,  # diminishing returns after 6, but Roberta-base uses 10
+    'num_mask_patterns': 6,  # diminishing returns after 6, Roberta-base uses at least 40
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true
@@ -59,7 +57,7 @@ param2default = {
     # training
     'batch_size': 16,
     'lr': 1e-4,  # 1e-4 is used in fairseq (and performs better here), and 1e-3 is default in huggingface
-    'num_epochs': 1,
+    'num_epochs': 1,  # use 1 epoch to use dynamic masking
     'num_warmup_steps': 24_000,  # 24K used in Roberta-base
     'weight_decay': 0.0,
 
