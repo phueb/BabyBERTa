@@ -46,7 +46,7 @@ class BaseScorer(ABC):
 
         # ph: use model class for tokenization for fairseq models
         if tokenizer is None:
-            raise NotImplementedError('fairseq Roberta model does not use tokenizer.')
+            raise NotImplementedError('fairseq Roberta not supported.')
 
         # ph: use tokenizers library for BabyBERTa
         elif isinstance(self._tokenizer, tokenizers.Tokenizer):

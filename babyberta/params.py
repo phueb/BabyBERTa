@@ -14,7 +14,7 @@ param2requests = {
     'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
     'leave_unmasked_prob_start': [0.0],
 
-    # 'load_from_checkpoint': ['param_028', 'param_034'],
+    # 'load_from_checkpoint': ['param_001', 'param_003'],
 
 }
 
@@ -42,7 +42,7 @@ param2default = {
     'num_sentences_per_input': 1,  # if too large -> may exceed CUDA memory, 1 is best for good number-agreement
     'include_punctuation': True,
     'allow_truncated_sentences': False,
-    'num_mask_patterns': 6,  # diminishing returns after 6, Roberta-base uses at least 40
+    'num_mask_patterns': 10,  # 10 is better than fewer
     'mask_pattern_size': 2,  # used only if probabilistic_masking = False
     'probabilistic_masking': True,
     'mask_probability': 0.15,  # used only if probabilistic_masking = true

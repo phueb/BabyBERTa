@@ -8,6 +8,22 @@ This repository contains research code for testing a small RoBERTA model trained
 a small corpus of child-directed speech (5M words from American-English CHILDES).
 Our model is implemented using the `transformers` Python package, maintained by `huggingface`.
 
+## Usage
+
+To use BabyBERTa pre-trained on AO-CHILDES, download this repository, install the dependencies, and then:
+
+```python
+from transformers.models.roberta import RobertaForMaskedLM
+from babyberta.utils import load_tokenizer
+from babyberta import configs
+
+# tokenizer
+path_tokenizer_config = configs.Dirs.tokenizers / 'a-a-w-w-w-8192.json'
+tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=128)
+# model
+model = RobertaForMaskedLM.from_pretrained(f'saved_models/BabyBERTa_AO-CHILDES')
+``` 
+
 
 ## History
 
@@ -73,36 +89,7 @@ Potential differences include:
 which produces output compatible with the `forward()` method of BabyBERTa.
 
 
-## Using the BabyBERTa vocab
-
-To use our 8192-words vocabulary for training a Roberta model in `fairseq` v0.10.2, 
-
-```python
-from fairseq.data.encoders.gpt2_bpe import GPT2BPE, GPT2BPEConfig
-
-encoder_json_path = 'data/corpora/c-n-w-8192/vocab.json'
-vocab_bpe_path = 'data/corpora/c-n-w-8192/merges.txt'
-cfg = GPT2BPEConfig(gpt2_encoder_json=encoder_json_path,
-                    gpt2_vocab_bpe=vocab_bpe_path)
-encoder = GPT2BPE(cfg)
-```
-
-The resultant object `encoder` can then be passed to `roberta.bpe` to replace the default encoder, 
- which uses 50k words.
- 
-To get a feeling for how this encoder splits text, use: 
-
-```python
-bpe_tokens = []
-for token in encoder.bpe.re.findall(encoder.bpe.pat, text):
-    token = "".join(encoder.bpe.byte_encoder[b] for b in token.encode("utf-8"))
-    bpe_tokens.extend(
-        bpe_token for bpe_token in encoder.bpe.bpe(token).split(" ")
-    )
-print(bpe_tokens)
-```
-
-## Running multiple jobs simultaneously
+## Replicating our results
 
 ### Dependencies
 
@@ -128,4 +115,4 @@ Then, type the following into the terminal:
 
 ## Compatibility
 
-Tested on Ubuntu 18.04, Python 3.7
+Tested on Ubuntu 18.04, Python 3.8
