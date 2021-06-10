@@ -44,12 +44,8 @@ class BaseScorer(ABC):
         self._capitalize = capitalize
         self._max_length = 1024
 
-        # ph: use model class for tokenization for fairseq models
-        if tokenizer is None:
-            raise NotImplementedError('fairseq Roberta not supported.')
-
         # ph: use tokenizers library for BabyBERTa
-        elif isinstance(self._tokenizer, tokenizers.Tokenizer):
+        if isinstance(self._tokenizer, tokenizers.Tokenizer):
             self._tokenizer: tokenizers.Tokenizer
             self._tokenizer.mask_token = '<mask>'
             self._tokenizer.pad_token = '<pad>'

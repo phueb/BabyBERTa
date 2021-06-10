@@ -21,7 +21,7 @@ from babyberta import configs
 path_tokenizer_config = configs.Dirs.tokenizers / 'a-a-w-w-w-8192.json'
 tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=128)
 # model
-model = RobertaForMaskedLM.from_pretrained(f'saved_models/BabyBERTa_AO-CHILDES')
+model = RobertaForMaskedLM.from_pretrained('saved_models/BabyBERTa_AO-CHILDES')
 ``` 
 
 
