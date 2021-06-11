@@ -7,6 +7,7 @@ class Dirs:
     blimp = root / 'blimp'
     corpora = data / 'corpora'
     tokenizers = data / 'tokenizers'
+    saved_models = root / 'saved_models'
 
     # probing data can be found at https://github.com/phueb/Zorro/tree/master/sentences
     probing_sentences = Path('/') / 'media' / 'ludwig_data' / 'Zorro' / 'sentences'

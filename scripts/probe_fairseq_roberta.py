@@ -73,10 +73,6 @@ if __name__ == '__main__':
 
         # for each probing task
         for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
-
-            # if not '1_adjective' in sentences_path.name:
-            #     continue
-
             do_probing(save_path,
                        sentences_path,
                        model,

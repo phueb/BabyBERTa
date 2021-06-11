@@ -97,7 +97,7 @@ phenomenon2paradigms = {phenomenon: [pa for pa, ph in paradigm2phenomenon.items(
                         for phenomenon in phenomena}
 
 
-if __name__ == '__main__':
+def calc_and_print_accuracy():
 
     phenomenon2col = defaultdict(list)
 
@@ -108,7 +108,7 @@ if __name__ == '__main__':
         print(model_name)
         print('********************************')
 
-        phenomenon2col['Model'].append('+' + model_name.split('_')[-1])
+        phenomenon2col['Model'].append(model_name.replace('_', '+'))
 
         base_dir = Path('output') / model_name
 
@@ -139,9 +139,10 @@ if __name__ == '__main__':
             # Since all 67 classes have 1000 pairs, per-class and overall accuracies are the desired (micro)averages
 
     df = pd.DataFrame(data=phenomenon2col)
+    df = df[['Model'] + [n for n in sorted(df.columns) if n != 'Model']]
     print(df.round(1).to_latex(index=False, bold_rows=True, escape=False))
 
     print()
     df['Overall'] = df.mean(axis=1)
     for model_name, overall_acc in zip(df['Model'], df['Overall'].round(2)):
-        print(f'{model_name:<22} {overall_acc}')
+        print(f'{model_name:<32} {overall_acc}')

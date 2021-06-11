@@ -50,14 +50,14 @@ Because our goal is to work with a compact model, optimized for acquiring distri
 - fewer hidden units, attention heads, and layers: ~10M parameters vs ~100M
 - smaller vocabulary: ~8K vs ~50K
 - masked tokens are never unmasked
-- smaller batch size: 16 vs. 2K
+- smaller batch size: 16 vs. 8K
 - sentences with > 128 tokens are excluded (and never truncated)
-- fewer epochs: 1 vs. 4 (after each sequence is copied 10 times for masking, this results in 200K steps vs. 500K steps)
-- input sequences consist of 1 utterance, as opposed to multiple sentences
+- fewer epochs: 10 vs. approx. 40
+- input sequences consist of 1 sentence, as opposed to multiple sentences
 
 To achieve good performance on our number agreement tasks, 
-we observed the model must not be trained with more than 1 utterance per input.
-This observation hold for the CHILDES corpus, but not for other corpora.
+we observed the model must not be trained with more than 1 sentence per input.
+This observation holds for the CHILDES corpus, but not for other corpora.
 
 ## BabyBERTa vs. fairseq RoBERTa
 To train a BabyBERTa like model using `fairseq`, make sure to use the following command line arguments: 
@@ -85,7 +85,7 @@ Potential differences include:
 3. Multiple sentences may be combined (but default is 1) into a single sequence.
 4. Each sequence is sub-word tokenized with custom-trained BBPE Tokenizer from `tokenizers`.
 5. Multiple sequences are batched together (default is 16).
-6. Each batch of sequences is input to a custom trained `tokenizers` BBPE Tokenizer, 
+6. Each batch of sequences is input to a custom trained `tokenizers` Byte-Level BPE Tokenizer, 
 which produces output compatible with the `forward()` method of BabyBERTa.
 
 
