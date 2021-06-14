@@ -16,6 +16,43 @@ from babyberta.io import load_sentences_from_file, save_forced_choice_prediction
 RobertaHubInterface = type  # this should be fairseq.RobertaHubInterface but fairseq should not be imported here
 
 
+# these words must be capitalized for roberta-base to not split.
+# these words are teh only words in the Zorro test suite that are not in the vocab of roberta-base
+not_in_roberta_base_vocab = [
+    'thomas',
+    'edward',
+    'philip',
+    'chris',
+    'allen',
+    'gregory',
+    'alexander',
+    'roger',
+    'taylor',
+    'maria',
+    'obama',
+    'spanish',
+    'william',
+    'joseph',
+    'duke',
+    'laura',
+    'louis',
+    'henry',
+    'richard',
+    'sarah',
+    'carter',
+    'michael',
+    'robert',
+    'simon',
+]
+
+
+def capitalize_names_in_sentence(s: str):
+    for name in not_in_roberta_base_vocab:
+        if name in s:
+            s = s.replace(name, name.capitalize())
+    return s
+
+
 def do_probing(save_path: Path,
                sentences_path: Path,
                model: Union[RobertaForMaskedLM, RobertaHubInterface],
@@ -39,6 +76,10 @@ def do_probing(save_path: Path,
     # load probing sentences
     print(f'Starting probing with task={task_name}', flush=True)
     sentences = load_sentences_from_file(sentences_path, include_punctuation=include_punctuation)
+
+    # TODO test - roberta-base needs capitalized proper nouns
+    #  this increases overall accuracy by 1 point for roberta-base trained on 30b words
+    sentences = [capitalize_names_in_sentence(s) for s in sentences]
 
     # prepare dataset (if using huggingface model)
     if tokenizer is not None:

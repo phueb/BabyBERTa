@@ -4,14 +4,14 @@ from typing import Tuple
 param2requests = {
     'corpora': [
         ('aochildes',),
-        # ('aonewsela',),
-        # ('wikipedia1',),
+        ('aonewsela',),
+        ('wikipedia1',),
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
         # ('aochildes', 'aonewsela', 'wikipedia3'),
     ],
 
-    'leave_unmasked_prob': [0.1],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
-    'leave_unmasked_prob_start': [0.1],
+    'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
+    'leave_unmasked_prob_start': [0.0],
 
     # 'load_from_checkpoint': ['param_006', 'param_008'],
 

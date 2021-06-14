@@ -14,7 +14,7 @@ from babyberta.io import save_yaml_file
 
 
 MODEL_DATA_FOLDER_NAME = 'fairseq_Roberta-base_5M'
-
+REP = 2
 LAST_OR_BEST = 'last'  # last is better than best
 
 
@@ -34,6 +34,9 @@ if __name__ == '__main__':
     for path_checkpoint in path_model_data.rglob(f'checkpoint_{LAST_OR_BEST}.pt'):
 
         rep = path_checkpoint.parent.name
+
+        if int(rep) != int(REP):
+            continue
 
         # load model
         print(f'Loading model from {str(path_model_data / rep)}')
