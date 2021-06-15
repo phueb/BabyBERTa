@@ -20,8 +20,8 @@ import transformers
 from mxnet.gluon import Block
 from mxnet.gluon.data import SimpleDataset
 
-from mlm_scoring import batchify as btf_generic
-from mlm_scoring.loaders import Corpus
+from src import batchify as btf_generic
+from src.loaders import Corpus
 
 
 class BaseScorer(ABC):
@@ -34,14 +34,12 @@ class BaseScorer(ABC):
                  tokenizer: Union[tokenizers.Tokenizer, RobertaTokenizerFast],
                  ctxs: List[mx.Context],
                  eos: Optional[bool] = None,
-                 capitalize: Optional[bool] = None,
                  ) -> None:
         self._model = model
         self._vocab = vocab
         self._tokenizer = tokenizer
         self._ctxs = ctxs
         self._eos = eos
-        self._capitalize = capitalize
         self._max_length = 1024
 
         # ph: use tokenizers library for BabyBERTa
@@ -179,10 +177,6 @@ class BaseScorer(ABC):
             return scores_per_token, true_tok_lens
         else:
             return scores.tolist(), true_tok_lens
-
-    def score_sentences(self, sentences: List[str], **kwargs) -> float:
-        corpus = Corpus.from_text(sentences)
-        return self.score(corpus, **kwargs)[0]
 
 
 class MLMScorerPT(BaseScorer):

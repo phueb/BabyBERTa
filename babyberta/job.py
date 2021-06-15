@@ -25,7 +25,7 @@ def main(param2val):
     # params
     params = Params.from_param2val(param2val)
     params.framework = 'huggingface'
-    params.is_official = False
+    params.is_huggingface_recommended = False
     print(params, flush=True)
 
     #  path to root folder on shared drive where results are saved, and data is loaded

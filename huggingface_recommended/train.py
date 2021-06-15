@@ -1,5 +1,5 @@
 """
-Train a Roberta model using code provided by library maintainers (we refer to it as the official implementation)
+Train a Roberta model using code provided by library maintainers
 """
 
 import logging

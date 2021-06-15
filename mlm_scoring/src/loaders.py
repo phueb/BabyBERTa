@@ -41,13 +41,11 @@ class Corpus(OrderedDict):
         return Corpus.from_text(fp, **kwargs)
 
     @classmethod
-    def from_text(cls, fp: Iterable[str], max_utts=None, lower_case=True):
+    def from_text(cls, fp: Iterable[str], lower_case=False):
         corpus = cls()
         # For text files, utterance ID is just the zero-indexed line number
         idx = 0
         for line in fp:
-            if max_utts is not None and idx >= max_utts:
-                break
             if lower_case:
                 corpus[idx] = line.strip().lower()  # ph: lower-case
             else:
@@ -166,22 +164,6 @@ class ScoredCorpus(OrderedDict):
         for (idx, text), score in zip(corpus.items(), scores):
             scored_corpus[idx] = {'score': score, 'text': text}
         return scored_corpus
-
-    @classmethod
-    def from_files(cls, corpus_file: Path, score_file: Path, max_utts: Optional[int] = None) -> OrderedDict:
-        """Creates a ScoredCorpus from separate text and score files
-
-        Args:
-            corpus_file (Path): A file with a sentence per line
-            score_file (Path): A file with either a float or a list of floats/null per line
-            max_utts (Optional[int], optional): Number
-
-        Returns:
-            ScoredCorpus: Resulting object
-        """
-        corpus = Corpus.from_file(corpus_file.open('rt'), max_utts=max_utts)
-        scores = [json.loads(line) for idx, line in enumerate(score_file.open('rt')) if max_utts is None or idx < max_utts]
-        return ScoredCorpus.from_corpus_and_scores(corpus, scores)
 
     def to_file(self,
                 file_path: Path,

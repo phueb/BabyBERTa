@@ -14,7 +14,7 @@ from aonewsela.dataset import NewselaDataSet
 from babyberta.utils import load_wikipedia_sentences
 from babyberta import configs
 
-CORPUS_NAME = 'aochildes'
+CORPUS_NAME = 'aonewsela'
 
 
 # load corpus
@@ -34,6 +34,9 @@ else:
 print(f'Loaded {len(sentences):,} sentences')
 
 out_path = configs.Dirs.root / 'data' / 'corpora' / f'{CORPUS_NAME}.txt'
+if out_path.exists():
+    out_path.unlink()  # otherwise, sentences are appended to old file
+
 with out_path.open('w') as f:
     for sentence in sentences:
         f.write(sentence + '\n')

@@ -4,7 +4,7 @@ Probe pre-trained roberta base models
 import torch
 import shutil
 
-from transformers.models.roberta import RobertaForMaskedLM
+from transformers.models.roberta import RobertaForMaskedLM, RobertaTokenizer
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
 from babyberta.utils import load_tokenizer
@@ -36,9 +36,10 @@ for model_results_folder_name in [
     # load huggingface roberta base
     elif model_results_folder_name.startswith('huggingface'):
         model = RobertaForMaskedLM.from_pretrained('roberta-base')
+        tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         model.cuda(0)
-        path_tokenizer_config = configs.Dirs.root / 'data' / 'tokenizers' / 'roberta-base.json'
-        tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=512)
+        # path_tokenizer_config = configs.Dirs.root / 'data' / 'tokenizers' / 'roberta-base.json'
+        # tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=512)
     else:
         raise AttributeError
 

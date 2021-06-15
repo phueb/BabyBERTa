@@ -1,5 +1,5 @@
 """
-Probe roberta models trained in huggingface
+Probe roberta models trained with huggingface-recommended code
 """
 import shutil
 
@@ -12,7 +12,7 @@ from babyberta.utils import load_tokenizer
 from babyberta.io import save_yaml_file
 
 
-MAX_STEP = 160_000
+MAX_STEP = 260_000
 
 
 params = Params.from_param2val(param2default)
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         if not (path_model_results / 'param2val.yaml').exists():
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': 'huggingface',
-                                      'is_official': True,
+                                      'is_huggingface_recommended': True,
                                       'is_base': False,
                                       })
 

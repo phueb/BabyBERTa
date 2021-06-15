@@ -18,8 +18,8 @@ import os
 import mxnet as mx
 from pathlib import Path
 
-from mlm_scoring.loaders import Corpus, ScoredCorpus
-from mlm_scoring.scorers import MLMScorerPT
+from src.loaders import Corpus, ScoredCorpus
+from src.scorers import MLMScorerPT
 
 
 @contextmanager
@@ -63,25 +63,25 @@ def score_model_on_paradigm(model,
                             tokenizer,
                             path_paradigm: Path,
                             path_out_file: Path,
+                            lower_case: bool,
                             ) -> None:
 
     ctxs = setup_ctxs(gpu_str='0')
 
     # Set scorer
     scorer = MLMScorerPT(model, vocab, tokenizer,
-                         eos=False, wwm=False, capitalize=None, ctxs=ctxs)
+                         eos=False, wwm=False, ctxs=ctxs)
 
     # What data do we use?
     infile = path_paradigm.open('r')
-    corpus = Corpus.from_file(infile, max_utts=None)
+    corpus = Corpus.from_file(infile, lower_case=lower_case)
     logging.warning("# sentences: {}".format(len(corpus)))
 
     # === START SHARED COMPUTATION ===
 
     # A scorer takes a corpus and produces a list of scores in order of the corpus
     corpus_for_scoring = corpus
-    scores, true_tok_lens = scorer.score(corpus_for_scoring, ratio=1, split_size=500,
-                                         per_token=False)
+    scores, true_tok_lens = scorer.score(corpus_for_scoring, ratio=1, split_size=500, per_token=False)
     scored_corpus = ScoredCorpus.from_corpus_and_scores(corpus, scores)
 
     num_words_list, max_sent_len = corpus.get_num_words()

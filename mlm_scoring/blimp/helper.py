@@ -1,16 +1,4 @@
-""""
-Adapted from https://github.com/awslabs/mlm-scoring
-
-Collect pseudo-log-likelihoods collected in output/, and output summary table
-"""
-import numpy as np
-import logging
-from pathlib import Path
-import pandas as pd
-from collections import defaultdict
-
-
-paradigm2phenomenon = {
+file_name2phenomenon = {
 
     'anaphor_gender_agreement': 'anaphor agreement',
     'anaphor_number_agreement': 'anaphor agreement',
@@ -92,57 +80,3 @@ paradigm2phenomenon = {
     'wh_island': 'island effects',
 
 }
-phenomena = set([v for v in paradigm2phenomenon.values()])
-phenomenon2paradigms = {phenomenon: [pa for pa, ph in paradigm2phenomenon.items() if ph == phenomenon]
-                        for phenomenon in phenomena}
-
-
-def calc_and_print_accuracy():
-
-    phenomenon2col = defaultdict(list)
-
-    for model_dir in Path('output').glob('*'):
-
-        model_name = model_dir.name
-        print('********************************')
-        print(model_name)
-        print('********************************')
-
-        phenomenon2col['Model'].append(model_name.replace('_', '+'))
-
-        base_dir = Path('output') / model_name
-
-        for phenomenon, paradigms in phenomenon2paradigms.items():
-
-            accuracies = []
-            for paradigm in paradigms:
-                file = base_dir / f'{paradigm}.txt'
-                with file.open('rt') as f:
-                    scores = f.readlines()
-                num_pairs = len(scores) // 2
-
-                # compute accuracy for paradigm
-                count = 0
-                for i in range(num_pairs):
-                    if float(scores[2*i]) > float(scores[2*i+1]):
-                        count += 1
-                if len(scores) == 0:
-                    logging.error("{} is empty, skipping".format(file))
-                    continue
-                assert num_pairs == 1000
-                acc = count / num_pairs
-                accuracies.append(acc * 100)
-
-            # collect
-            phenomenon_rotated = '\rot{' + phenomenon.capitalize() + '}'  # /rot{} is a custom latex command
-            phenomenon2col[phenomenon_rotated].append(np.mean(accuracies))
-            # Since all 67 classes have 1000 pairs, per-class and overall accuracies are the desired (micro)averages
-
-    df = pd.DataFrame(data=phenomenon2col)
-    df = df[['Model'] + [n for n in sorted(df.columns) if n != 'Model']]
-    print(df.round(1).to_latex(index=False, bold_rows=True, escape=False))
-
-    print()
-    df['Overall'] = df.mean(axis=1)
-    for model_name, overall_acc in zip(df['Model'], df['Overall'].round(2)):
-        print(f'{model_name:<32} {overall_acc}')
