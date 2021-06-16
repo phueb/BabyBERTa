@@ -22,7 +22,7 @@ if __name__ == '__main__':
 
     assert configs.Dirs.probing_sentences.exists()
 
-    framework, model_size, data_size = MODEL_DATA_FOLDER_NAME.split('_')
+    framework, architecture, data_size = MODEL_DATA_FOLDER_NAME.split('_')
 
     # remove previous results
     path_model_results = configs.Dirs.probing_results / MODEL_DATA_FOLDER_NAME
@@ -69,9 +69,8 @@ if __name__ == '__main__':
         if not (path_model_results / 'param2val.yaml').exists():
             save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                            param2val={'framework': framework,
-                                      'model_size': model_size,
+                                      'architecture': architecture,
                                       'data_size': data_size,
-                                      'is_base': 'base' in model_size,
                                       })
 
         # for each probing task
@@ -81,7 +80,7 @@ if __name__ == '__main__':
                        model,
                        step,
                        include_punctuation=True,
-                       score_with_mask=False)
+                       )
 
 
 

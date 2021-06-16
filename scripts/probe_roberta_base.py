@@ -1,13 +1,11 @@
 """
 Probe pre-trained roberta base models
 """
-import torch
 import shutil
 
 from transformers.models.roberta import RobertaForMaskedLM, RobertaTokenizer
 from transformers import AutoTokenizer, AutoModelForMaskedLM
 
-from babyberta.utils import load_tokenizer
 from babyberta.probing import do_probing
 from babyberta import configs
 from babyberta.io import save_yaml_file
@@ -16,48 +14,30 @@ from babyberta.io import save_yaml_file
 for model_results_folder_name in [
     'huggingface_Roberta-base_10M',
     'huggingface_Roberta-base_30B',
-    # 'fairseq_Roberta-base_30B',  # this model is identical to the one loaded by huggingface
 ]:
 
-    framework, model_size, data_size = model_results_folder_name.split('_')
-
-    # load fairseq roberta base
-    if model_results_folder_name.startswith('fairseq'):
-        model = torch.hub.load('pytorch/fairseq', 'roberta.base')
-        model.cuda(0)
-        tokenizer = None
+    framework, architecture, data_size = model_results_folder_name.split('_')
 
     # load NYU roberta-base trained on less data
-    elif model_results_folder_name.startswith('huggingface') and data_size == '10M':
+    if data_size == '10M':
         model = AutoModelForMaskedLM.from_pretrained("nyu-mll/roberta-base-10M-2")
-        model.cuda(0)
         tokenizer = AutoTokenizer.from_pretrained("nyu-mll/roberta-base-10M-2")
 
     # load huggingface roberta base
-    elif model_results_folder_name.startswith('huggingface'):
+    elif data_size == '30B':
         model = RobertaForMaskedLM.from_pretrained('roberta-base')
         tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-        model.cuda(0)
-        # path_tokenizer_config = configs.Dirs.root / 'data' / 'tokenizers' / 'roberta-base.json'
-        # tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=512)
     else:
         raise AttributeError
 
     print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
+    model.cuda(0)
     model.eval()
 
     # remove old results
     path_model_results = configs.Dirs.probing_results / model_results_folder_name
     if path_model_results.exists():
         shutil.rmtree(path_model_results)
-
-    # get step
-    if framework == 'fairseq':
-        step = 500_000
-    elif framework == 'huggingface':
-        step = 500_000  # using num steps reported by fairseq (not reported by huggingface)
-    else:
-        raise AttributeError('Invalid arg to framework')
 
     # make new save_path
     rep = 0
@@ -69,7 +49,7 @@ for model_results_folder_name in [
     if not (path_model_results / 'param2val.yaml').exists():
         save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                        param2val={'framework': framework,
-                                  'model_size': model_size,
+                                  'architecture': architecture,
                                   'data_size': data_size,
                                   })
 
@@ -78,10 +58,9 @@ for model_results_folder_name in [
         do_probing(save_path,
                    sentences_path,
                    model,
-                   step=step,
+                   step=500_000,
                    tokenizer=tokenizer,
                    include_punctuation=True,
-                   score_with_mask=False,
                    verbose=False
                    )
 

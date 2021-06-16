@@ -6,7 +6,7 @@ import pyprind
 import torch
 from collections import namedtuple
 
-from transformers.models.roberta import RobertaTokenizerFast
+from transformers.models.roberta import RobertaTokenizer, RobertaTokenizerFast
 
 from tokenizers import Encoding
 from tokenizers import Tokenizer
@@ -16,30 +16,42 @@ from babyberta import configs
 from babyberta.params import Params
 
 
-def smart_tokenize(tokenizer: Union[Tokenizer, RobertaTokenizerFast],
+def smart_tokenize(tokenizer: Union[Tokenizer, RobertaTokenizer],
                    sequence: str,
                    ) -> List[str]:
-    if isinstance(tokenizer, Tokenizer):  # e.g. auto-tokenizer used by NYU
+
+    # used by babyberta
+    if isinstance(tokenizer, Tokenizer):
         tokens = tokenizer.encode(sequence, add_special_tokens=False).tokens
-    elif isinstance(tokenizer, RobertaTokenizerFast):
-        tokens = tokenizer.tokenize(sequence, add_special_tokens=False)
+
+    # used pre-trained roberta-base
+    elif isinstance(tokenizer, RobertaTokenizer) or isinstance(tokenizer, RobertaTokenizerFast):
+        tokens = tokenizer.tokenize(sequence)  # does not add special tokens
+
     else:
+        print(type(tokenizer))
         raise AttributeError('Unknown tokenizer')
     return tokens
 
 
-def smart_encode(tokenizer: Union[Tokenizer, RobertaTokenizerFast],
+def smart_encode(tokenizer: Union[Tokenizer, RobertaTokenizer],
                  sequences_in_batch: List[str],
                  ) -> List[Encoding]:
-    if isinstance(tokenizer, Tokenizer):  # e.g. auto-tokenizer used by NYU
+
+    # used by babyberta
+    if isinstance(tokenizer, Tokenizer):
         encodings = tokenizer.encode_batch(sequences_in_batch)
-    elif isinstance(tokenizer, RobertaTokenizerFast):
+
+    # used by pretrained roberta-base
+    elif isinstance(tokenizer, RobertaTokenizer) or isinstance(tokenizer, RobertaTokenizerFast):
         tmp = tokenizer(sequences_in_batch, padding='longest', is_split_into_words=False)
         encodings = []
         Encoding_ = namedtuple('Encoding', ['ids', 'attention_mask'])
         for ids, am in zip(tmp['input_ids'], tmp['attention_mask']):
             encodings.append(Encoding_(ids, am))
+
     else:
+        print(type(tokenizer))
         raise AttributeError('Unknown tokenizer')
 
     return encodings
@@ -47,7 +59,7 @@ def smart_encode(tokenizer: Union[Tokenizer, RobertaTokenizerFast],
 
 class ProbingParams:
     sample_with_replacement = False
-    max_num_tokens_in_sequence = 256
+    max_input_length = 256
     leave_unmasked_prob_start = 0.0
     leave_unmasked_prob = 0.0
     random_token_prob = 0.0
@@ -63,7 +75,7 @@ class DataSet:
     @classmethod
     def for_probing(cls,
                     sequences: List[str],
-                    tokenizer: Union[Tokenizer, RobertaTokenizerFast],
+                    tokenizer: Union[Tokenizer, RobertaTokenizer],
                     ):
         """
         returns instance when used for probing.
@@ -84,7 +96,7 @@ class DataSet:
 
     def __init__(self,
                  sequences: List[str],
-                 tokenizer: Union[Tokenizer, RobertaTokenizerFast],
+                 tokenizer: Union[Tokenizer, RobertaTokenizer],
                  params: Union[Params, ProbingParams],
                  data: Optional[List[Tuple[str, Tuple[int]]]] = None,
                  disallow_sub_words_when_probing: bool = False,
@@ -212,12 +224,12 @@ class DataSet:
             # exclude sequence if too many tokens
             num_tokens_and_special_symbols = num_tokens + 2
             if not self.params.allow_truncated_sentences and \
-                    num_tokens_and_special_symbols > self.params.max_num_tokens_in_sequence:
+                    num_tokens_and_special_symbols > self.params.max_input_length:
                 num_too_large += 1
                 continue
 
             num_tokens_total += num_tokens
-            num_tokens_after_truncation = min(self.params.max_num_tokens_in_sequence - 2,
+            num_tokens_after_truncation = min(self.params.max_input_length - 2,
                                               # -2 because we need to fit eos and bos symbols
                                               num_tokens)  # prevent masking of token in overflow region
             tokenized_sequence_lengths.append(num_tokens_after_truncation)
@@ -226,7 +238,7 @@ class DataSet:
         if self.params.allow_truncated_sentences:
             print(f'Did not exclude sentences because truncated sentences are allowed.')
         else:
-            print(f'Excluded {num_too_large} sequences with more than {self.params.max_num_tokens_in_sequence} tokens.')
+            print(f'Excluded {num_too_large} sequences with more than {self.params.max_input_length} tokens.')
         print(f'Mean number of tokens in sequence={num_tokens_total / len(sequences):.2f}',
               flush=True)
 
@@ -285,8 +297,8 @@ class DataSet:
         batch_shape = input_ids_raw.shape
         mask = self._make_mask_matrix(batch_shape, mask_patterns)
 
-        if batch_shape[1] > self.params.max_num_tokens_in_sequence:
-            raise ValueError(f'Batch dim 1 ({batch_shape[1]}) is larger than {self.params.max_num_tokens_in_sequence}')
+        if batch_shape[1] > self.params.max_input_length:
+            raise ValueError(f'Batch dim 1 ({batch_shape[1]}) is larger than {self.params.max_input_length}')
 
         # decide unmasking and random replacement
         leave_unmasked_prob = next(self.leave_unmasked_probabilities)

@@ -16,7 +16,7 @@ params = Params.from_param2val(param2default)
 
 # Byte-level BPE tokenizer
 path_tokenizer_config = configs.Dirs.tokenizers / f'{params.tokenizer}.json'
-tokenizer = load_tokenizer(path_tokenizer_config, params.max_num_tokens_in_sequence)
+tokenizer = load_tokenizer(path_tokenizer_config, params.max_input_length)
 
 # collect data for data-frame
 col2values = defaultdict(list)

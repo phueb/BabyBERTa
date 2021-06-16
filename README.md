@@ -14,13 +14,11 @@ To use BabyBERTa pre-trained on AO-CHILDES, download this repository, install th
 
 ```python
 from transformers.models.roberta import RobertaForMaskedLM
-from babyberta.utils import load_tokenizer
-from babyberta import configs
+from transformers import AutoTokenizer
 
-# tokenizer
-path_tokenizer_config = configs.Dirs.tokenizers / 'a-a-w-w-w-8192.json'
-tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=128)
-# model
+tokenizer = AutoTokenizer.from_pretrained('saved_models/BabyBERTa_AO-CHILDES',
+                                          add_prefix_space=True,  # this must be added to produce intended behavior
+                                          )
 model = RobertaForMaskedLM.from_pretrained('saved_models/BabyBERTa_AO-CHILDES')
 ``` 
 
@@ -32,7 +30,7 @@ whose published work is available [here](https://www.aclweb.org/anthology/W08-21
 Having found little benefit for joint SRL and MLM training of a custom (smaller in size) version of BERT,
  a new line of research into BERT's acquisition of syntactic knowledge began. 
 - 2020 (Fall): We discovered that a cognitively more plausible MLM pre-training strategy for a small BERT-like transformer outperformed an identically sized RoBERTa model, trained with standard methods in the `fairseq` library, on a large number of number agreement tasks. 
-- 2021 (Spring): We are currently investigating which modifications of pre-training are most useful for acquiring syntactic knowledge in the small-model and small-data setting for Transformer language models.
+- 2021 (Spring): We investigated which modifications of pre-training are most useful for acquiring syntactic knowledge in the small-model and small-data setting for masked language models.
  
 ## Probing for syntactic knowledge
 

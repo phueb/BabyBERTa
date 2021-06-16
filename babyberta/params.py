@@ -51,9 +51,9 @@ param2default = {
     'leave_unmasked_prob': 0.0,  # better performance if no unmasking
     'random_token_prob': 0.1,
     'corpora': ('aochildes',),
-    'tokenizer': 'a-a-w-w-w-8192',  # larger than 8k slightly reduces performance
+    'tokenizer': 'babyberta',  # larger than 8k slightly reduces performance
     'add_prefix_space': True,  # better if True, whether to treat first token like any other token (False in GPT-2)
-    'max_num_tokens_in_sequence': 128,  # unacceptable performance if lower than ~32
+    'max_input_length': 128,  # unacceptable performance if lower than ~32
 
     # training
     'batch_size': 16,
@@ -61,9 +61,6 @@ param2default = {
     'num_epochs': 1,  # use 1 epoch to use dynamic masking
     'num_warmup_steps': 24_000,  # 24K used in Roberta-base
     'weight_decay': 0.0,
-
-    # eval
-    'score_with_mask': False,  # True to use pseudo-log-likelihoods when probing with forced-choice task, BLIMP style
 
     # model
     'load_from_checkpoint': 'none',
@@ -100,7 +97,7 @@ class Params:
     corpora: Tuple[str]
     tokenizer: str
     add_prefix_space: bool
-    max_num_tokens_in_sequence: int
+    max_input_length: int
 
     # training
     batch_size: int
@@ -108,9 +105,6 @@ class Params:
     num_epochs: int
     num_warmup_steps: int
     weight_decay: float
-
-    # eval
-    score_with_mask: bool
 
     # model
     load_from_checkpoint: str

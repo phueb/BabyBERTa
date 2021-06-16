@@ -64,7 +64,7 @@ def main():
     logger.info("Loading tokenizer")
     tokenizer = RobertaTokenizerFast(vocab_file=None,
                                      merges_file=None,
-                                     tokenizer_file=str(configs.Dirs.tokenizers / f'{params.tokenizer}.json'),
+                                     tokenizer_file=str(configs.Dirs.tokenizers / params.tokenizer / 'tokenizer.json'),
                                      )
     logger.info("Initialising Roberta from scratch")
     config = RobertaConfig(vocab_size=tokenizer.vocab_size,
@@ -87,7 +87,7 @@ def main():
             examples["text"],
             padding=True,
             truncation=True,
-            max_length=params.max_num_tokens_in_sequence,
+            max_length=params.max_input_length,
             # We use this option because DataCollatorForLanguageModeling (see below) is more efficient when it
             # receives the `special_tokens_mask`.
             return_special_tokens_mask=True,

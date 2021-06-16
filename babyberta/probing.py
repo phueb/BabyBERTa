@@ -16,49 +16,11 @@ from babyberta.io import load_sentences_from_file, save_forced_choice_prediction
 RobertaHubInterface = type  # this should be fairseq.RobertaHubInterface but fairseq should not be imported here
 
 
-# these words must be capitalized for roberta-base to not split.
-# these words are teh only words in the Zorro test suite that are not in the vocab of roberta-base
-not_in_roberta_base_vocab = [
-    'thomas',
-    'edward',
-    'philip',
-    'chris',
-    'allen',
-    'gregory',
-    'alexander',
-    'roger',
-    'taylor',
-    'maria',
-    'obama',
-    'spanish',
-    'william',
-    'joseph',
-    'duke',
-    'laura',
-    'louis',
-    'henry',
-    'richard',
-    'sarah',
-    'carter',
-    'michael',
-    'robert',
-    'simon',
-]
-
-
-def capitalize_names_in_sentence(s: str):
-    for name in not_in_roberta_base_vocab:
-        if name in s:
-            s = s.replace(name, name.capitalize())
-    return s
-
-
 def do_probing(save_path: Path,
                sentences_path: Path,
                model: Union[RobertaForMaskedLM, RobertaHubInterface],
                step: int,
                include_punctuation: bool,
-               score_with_mask: bool,
                verbose: bool = False,
                tokenizer: Optional[Tokenizer] = None,  # not needed when probing fairseq Roberta
                ) -> None:
@@ -69,17 +31,12 @@ def do_probing(save_path: Path,
     """
     model.eval()
 
-    task_name = sentences_path.stem
-    vocab_size = sentences_path.parent.name
-    task_type = sentences_path.parent.parent.name
+    probe_name = sentences_path.stem
+    vocab_name = sentences_path.parent.name
 
     # load probing sentences
-    print(f'Starting probing with task={task_name}', flush=True)
+    print(f'Starting probing with {probe_name}', flush=True)
     sentences = load_sentences_from_file(sentences_path, include_punctuation=include_punctuation)
-
-    # TODO test - roberta-base needs capitalized proper nouns
-    #  this increases overall accuracy by 1 point for roberta-base trained on 30b words
-    sentences = [capitalize_names_in_sentence(s) for s in sentences]
 
     # prepare dataset (if using huggingface model)
     if tokenizer is not None:
@@ -90,69 +47,22 @@ def do_probing(save_path: Path,
         dataset = None
 
     # prepare out path
-    probing_results_path = save_path / task_type / vocab_size / f'probing_{task_name}_results_{step}.txt'
+    probing_results_path = save_path / vocab_name / f'probing_{probe_name}_results_{step}.txt'
     if not probing_results_path.parent.exists():
         probing_results_path.parent.mkdir(exist_ok=True, parents=True)
 
-    # do inference on forced-choice task
-    if task_type == 'forced_choice':
-        if tokenizer is not None:
-            cross_entropies = predict_forced_choice(model, dataset, score_with_mask)
-        else:
-            cross_entropies = predict_forced_choice_fairseq(model, sentences, score_with_mask, verbose)
-        save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
-
-    # do inference on open_ended task
-    elif task_type == 'open_ended':
-        if tokenizer is not None:
-            predicted_words = predict_open_ended(model, dataset)
-        else:
-            predicted_words = predict_open_ended_fairseq(model, sentences)
-        save_open_ended_predictions(sentences, predicted_words, probing_results_path,
-                                    verbose=True if 'dummy' in task_name else verbose)
-
+    # do inference
+    if tokenizer is not None:
+        cross_entropies = predict_forced_choice(model, dataset)
     else:
-        raise AttributeError('Invalid arg to "task_type".')
+        cross_entropies = predict_forced_choice_fairseq(model, sentences, verbose)
 
-
-def predict_open_ended(model: RobertaForMaskedLM,
-                       dataset: DataSet,
-                       ) -> List[str]:
-    model.eval()
-    res = []
-
-    with torch.no_grad():
-
-        for x, _, mm in dataset:
-            # get logits for all words in batch
-            output = model(**{k: v.to('cuda') for k, v in x.items()})
-            logits_3d = output['logits'].detach()
-
-            # get predicted words for masked locations
-            logits_for_masked_words = logits_3d[mm]  # 2D index into 3D array -> 2D array [num masks, vocab]
-            token_ids = [torch.argmax(logits).item() for logits in logits_for_masked_words]
-            predicted_words = []
-            for i in token_ids:
-                w = dataset.tokenizer.id_to_token(i)
-                if w is None:
-                    raise RuntimeError(f'Did not find token-id={i} in vocab')
-                predicted_words.append(w)
-
-            # number of mask symbols should be number of sentences
-            if len(predicted_words) != len(logits_3d):
-                raise ValueError(f' Num predicted words ({len(predicted_words)}) must be num logits ({len(logits_3d)})')
-
-            res.extend(predicted_words)
-
-    if not res:
-        raise RuntimeError('Did not compute predicted words for open_ended task.')
-
-    return res
+    # save results
+    save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
 
 def predict_forced_choice(model: RobertaForMaskedLM,
                           dataset: DataSet,
-                          score_with_mask: bool,
                           ) -> List[float]:
     model.eval()
     cross_entropies = []
@@ -162,36 +72,22 @@ def predict_forced_choice(model: RobertaForMaskedLM,
 
         for x, _, _ in dataset:
 
-            if not score_with_mask:
-                # get loss
-                output = model(**{k: v.to('cuda') for k, v in x.items()})
-                logits_3d = output['logits']
-                logits_for_all_words = logits_3d.permute(0, 2, 1)
-                labels = x['input_ids'].cuda()
-                loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
-                                labels,  # need to be [batch size, seq length]
-                                )
+            # get loss
+            output = model(**{k: v.to('cuda') for k, v in x.items()})
+            logits_3d = output['logits']
+            logits_for_all_words = logits_3d.permute(0, 2, 1)
+            labels = x['input_ids'].cuda()
+            loss = loss_fct(logits_for_all_words,  # need to be [batch size, vocab size, seq length]
+                            labels,  # need to be [batch size, seq length]
+                            )
 
-                # compute avg cross entropy per sentence
-                # to do so, we must exclude loss for padding symbols, using attention_mask
-                cross_entropies += [loss_i[np.where(row_mask)[0]].mean().item()
-                                    for loss_i, row_mask in zip(loss, x['attention_mask'].numpy())]
-
-            else:  # todo test new probing method
-
-                max_token_pos = x['attention_mask'].numpy().sum(axis=1).max()
-                print(x['attention_mask'].numpy())
-                print(max_token_pos)
-                raise NotImplementedError
-                for pos in range(max_token_pos):
-
-                    # insert mask at current position
-
-                    pass
-
+            # compute avg cross entropy per sentence
+            # to do so, we must exclude loss for padding symbols, using attention_mask
+            cross_entropies += [loss_i[np.where(row_mask)[0]].mean().item()
+                                for loss_i, row_mask in zip(loss, x['attention_mask'].numpy())]
 
     if not cross_entropies:
-        raise RuntimeError('Did not compute cross entropies for forced_choice task.')
+        raise RuntimeError(f'Did not compute cross entropies.')
 
     return cross_entropies
 
@@ -202,7 +98,6 @@ def make_pretty(sentence: str):
 
 def predict_forced_choice_fairseq(model: RobertaHubInterface,
                                   sentences: List[str],
-                                  score_with_mask: bool,  # TODO implement
                                   verbose: bool,
                                   ):
     from fairseq import utils
@@ -229,21 +124,4 @@ def predict_forced_choice_fairseq(model: RobertaHubInterface,
             if verbose:
                 print(
                     f'{n + 1:>6}/{len(sentences):>6} | {ce:.2f} {make_pretty(sentence)}')
-    return res
-
-
-def predict_open_ended_fairseq(model: RobertaHubInterface,
-                               sentences: List[str],
-                               ) -> List[str]:
-
-    res = []
-    for n, sentence in enumerate(sentences):
-        with torch.no_grad():
-            for result in model.fill_mask(sentence, topk=3):
-                sentence_out, _, pw = result
-                if pw:  # sometimes empty string is predicted
-                    break
-            res.append(pw)
-            print(f'{n + 1:>6}/{len(sentences):>6} | {make_pretty(sentence_out)}')
-
     return res

@@ -89,8 +89,8 @@ for model_name in model_names:
         # TODO this does not tokenize correctly and produces lower accuracy
         # tokenizer = RobertaTokenizerFast.from_pretrained(f'../saved_models/{model_name}', from_slow=False)
 
-        path_tokenizer_config = configs.Dirs.tokenizers / 'a-a-w-w-w-8192.json'
-        tokenizer = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=128)
+        path_tokenizer_config = configs.Dirs.tokenizers / 'babyberta.json'
+        tokenizer = load_tokenizer(path_tokenizer_config, max_input_length=128)
 
     # pre-trained RoBERTa-base by Warstadt et al., 2020
     elif model_name == 'RoBERTa-base_10M':

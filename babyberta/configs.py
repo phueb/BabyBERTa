@@ -10,7 +10,7 @@ class Dirs:
     saved_models = root / 'saved_models'
 
     # probing data can be found at https://github.com/phueb/Zorro/tree/master/sentences
-    probing_sentences = Path('/') / 'media' / 'ludwig_data' / 'Zorro' / 'sentences'
+    probing_sentences = Path('/') / 'media' / 'ludwig_data' / 'Zorro' / 'sentences' / 'babyberta'
     probing_results = Path.home() / 'Zorro' / 'runs'
 
     # wikipedia sentences file was created using https://github.com/akb89/witokit
@@ -31,7 +31,6 @@ class Data:
 class Training:
     feedback_interval = 1000
     max_step = None  # max step of aonewsela with num_mask_patterns = 6 is 160K
-    keep_intermediate_checkpoints = False
 
 
 class Eval:

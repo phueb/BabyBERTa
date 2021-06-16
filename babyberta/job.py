@@ -44,7 +44,7 @@ def main(param2val):
 
     # Byte-level BPE tokenizer
     path_tokenizer_config = project_path / 'data' / 'tokenizers' / f'{params.tokenizer}.json'
-    tokenizer = load_tokenizer(path_tokenizer_config, params.max_num_tokens_in_sequence)
+    tokenizer = load_tokenizer(path_tokenizer_config, params.max_input_length)
     vocab_size = len(tokenizer.get_vocab())
     print(f'Vocab size={vocab_size}')
 
@@ -73,7 +73,7 @@ def main(param2val):
                            is_encoder_decoder=False,
                            add_cross_attention=False,
                            layer_norm_eps=params.layer_norm_eps,  # 1e-5 used in fairseq
-                           max_position_embeddings=params.max_num_tokens_in_sequence + 2,
+                           max_position_embeddings=params.max_input_length + 2,
                            hidden_size=params.hidden_size,
                            num_hidden_layers=params.num_layers,
                            num_attention_heads=params.num_attention_heads,
@@ -143,11 +143,6 @@ def main(param2val):
             if step % configs.Eval.interval == 0:
                 is_evaluated_at_current_step = True
 
-                # save network weights for loading in a subsequent experiment
-                if configs.Training.keep_intermediate_checkpoints:
-                    torch.save(model.state_dict(), save_path / f'model_{step:012}.pt')
-                torch.save(model.state_dict(), save_path / 'model.pt')
-
                 # pp
                 if configs.Data.train_prob < 1.0:  # if there are eval and test data
                     model.eval()
@@ -166,7 +161,7 @@ def main(param2val):
                 # probing - test sentences for specific syntactic tasks
                 for sentences_path in probing_path.rglob(f'**/**/*.txt'):  # task_type / vocab_size
                     do_probing(save_path, sentences_path, model, step,
-                               params.include_punctuation, params.score_with_mask, tokenizer=tokenizer)
+                               params.include_punctuation, tokenizer=tokenizer)
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training
                     print('Detected last eval step. Exiting training loop', flush=True)
@@ -198,7 +193,7 @@ def main(param2val):
     # save
     model.save_pretrained(save_path)
     config.save_pretrained(save_path)
-    tokenizer.save(str(save_path / 'tokenizer.json'))
+    tokenizer.save(str(save_path / 'tokenizer.json'), pretty=True)
 
     print('Reached end of babyberta.job.main', flush=True)
 

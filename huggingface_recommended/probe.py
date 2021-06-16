@@ -31,7 +31,7 @@ if __name__ == '__main__':
         roberta = RobertaForMaskedLM.from_pretrained(path_model)
         roberta.cuda(0)
         path_tokenizer_config = configs.Dirs.root / 'data' / 'tokenizers' / f'{params.tokenizer}.json'
-        tokenizer = load_tokenizer(path_tokenizer_config, params.max_num_tokens_in_sequence)
+        tokenizer = load_tokenizer(path_tokenizer_config, params.max_input_length)
 
         step = MAX_STEP
         rep = path_model.parent.name
@@ -52,7 +52,6 @@ if __name__ == '__main__':
                        roberta,
                        step,
                        params.include_punctuation,
-                       params.score_with_mask,
                        tokenizer=tokenizer,
                        verbose=True,
                        )

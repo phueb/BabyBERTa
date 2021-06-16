@@ -13,8 +13,8 @@ from babyberta.utils import load_tokenizer
 tokenizer_base = RobertaTokenizer.from_pretrained("roberta-base")
 
 
-path_tokenizer_config = configs.Dirs.tokenizers / 'a-a-w-w-w-8192.json'
-tokenizer_baby = load_tokenizer(path_tokenizer_config, max_num_tokens_in_sequence=128)
+path_tokenizer_config = configs.Dirs.tokenizers / 'babyberta.json'
+tokenizer_baby = load_tokenizer(path_tokenizer_config, max_input_length=128)
 
 
 vocab_base = [v.strip('Ġ') for v in tokenizer_base.get_vocab()]
@@ -34,7 +34,7 @@ print(f'{num_overlapping}/{num_total}={ratio:.2f} of BabyBERTa vocab items in Ro
 ###########################
 
 
-PATH_TO_SENTENCES = Path('/home/ph/Zorro/sentences/8192/')
+PATH_TO_SENTENCES = Path('/home/ph/Zorro/sentences/babyberta')
 PATH_TO_STOPWORDS = Path('/home/ph/Zorro/data/external_words/')
 
 stop_words = set((PATH_TO_STOPWORDS / "stopwords.txt").open().read().split())
@@ -63,5 +63,6 @@ ratio = num_overlapping / num_total
 print()
 print(f'{num_overlapping}/{num_total}={ratio:.2f} of words in test suite in Roberta-base vocab')
 
-
-print(tokenizer_base.tokenize('this is philip and edward'))
+# if names are not capitalized, names are split by roberta-base:
+print(tokenizer_base.tokenize('This is philip and edward.'))
+print(tokenizer_base.tokenize('This is Philip and Edward.'))

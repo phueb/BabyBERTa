@@ -6,7 +6,6 @@ from itertools import islice
 from pathlib import Path
 
 from tokenizers import Tokenizer
-from tokenizers.processors import TemplateProcessing
 
 from babyberta import configs
 
@@ -75,17 +74,12 @@ def forward_mlm(model,
 
 
 def load_tokenizer(config_path: Path,
-                   max_num_tokens_in_sequence: int,
+                   max_input_length: int,
                    ) -> Tokenizer:
 
     tokenizer = Tokenizer.from_file(str(config_path))
-    tokenizer.post_processor = TemplateProcessing(
-        single="<s> $A </s>",
-        pair=None,
-        special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
-    )
-    tokenizer.enable_padding(pad_id=tokenizer.token_to_id(configs.Data.pad_symbol), pad_token=configs.Data.pad_symbol)
-    tokenizer.enable_truncation(max_length=max_num_tokens_in_sequence)
+    tokenizer.enable_truncation(max_length=max_input_length)
+
     return tokenizer
 
 
