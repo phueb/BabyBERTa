@@ -47,7 +47,7 @@ class Corpus(OrderedDict):
         idx = 0
         for line in fp:
             if lower_case:
-                corpus[idx] = line.strip().lower()  # ph: lower-case
+                corpus[idx] = line.strip().lower()
             else:
                 corpus[idx] = line.strip()
 

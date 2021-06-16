@@ -33,7 +33,7 @@ def save_forced_choice_predictions(raw_sentences: List[str],
     with out_path.open('w') as f:
         for s, xe in zip(raw_sentences, cross_entropies):
             line = f'{s} {xe:.4f}'
-            f.write(line.lower() + '\n')
+            f.write(line + '\n')
             if verbose:
                 print(line)
 
