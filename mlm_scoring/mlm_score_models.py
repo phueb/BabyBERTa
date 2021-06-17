@@ -57,7 +57,7 @@ babyberta_models = [p.name for p in (configs.Dirs.root / 'saved_models').glob('*
 # trained by others
 huggingface_models = ['RoBERTa-base_10M', 'RoBERTa-base_30B']
 # trained by us using fairseq - needs to be converted
-fairseq_models = ['RoBERTa-base_5M', 'RoBERTa-base_13M']
+fairseq_models = ['RoBERTa-base_AO-CHILDES', 'RoBERTa-base_Wikipedia-1']
 
 model_names = babyberta_models + fairseq_models + huggingface_models
 
@@ -106,15 +106,13 @@ for model_name in model_names:
 
     # pre-trained by us using fairseq
     elif model_name in fairseq_models:
-        if '5M' in model_name:
-            data_size = '5M'  # AO-CHILDES
+        if 'AO-CHILDES' in model_name:
             bin_name = 'aochildes-data-bin'
-        elif '13M' in model_name:
-            data_size = '13M'  # Wikipedia-1
+        elif 'Wikipedia-1' in model_name:
             bin_name = 'wikipedia1_new1_seg'
         else:
             raise AttributeError('Invalid data size for fairseq model.')
-        path_model_data = configs.Dirs.root / 'fairseq_models' / f'fairseq_Roberta-base_{data_size}'
+        path_model_data = configs.Dirs.root / 'fairseq_models' / model_name
         model_ = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / '0'),
                                               checkpoint_file=str(path_model_data / '0' / 'checkpoint_last.pt'),
                                               data_name_or_path=str(path_model_data / bin_name),

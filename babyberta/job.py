@@ -82,14 +82,12 @@ def main(param2val):
                            )
     model = RobertaForMaskedLM(config=config)
     if params.load_from_checkpoint.startswith('param'):  # load weights from previous checkpoint
-        path_tmp = Path(param2val['project_path']) / 'runs_saved' / params.load_from_checkpoint
-        print(f'Trying to load model from {path_tmp}')
-        model_files = list(path_tmp.rglob('**/saves/model.pt'))
+        path_tmp = Path(param2val['project_path']) / 'runs' / params.load_from_checkpoint
+        model_files = list(path_tmp.rglob('**/saves/*.bin'))
         print(f'Found {len(model_files)} saved models')
         path_cpt = random.choice(model_files)
-        state_dict = torch.load(path_cpt)
-        model.load_state_dict(state_dict)
-        print(f'Loaded model from {path_cpt}')
+        print(f'Trying to load model from {path_cpt.parent}')
+        model.from_pretrained(path_cpt.parent)
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 

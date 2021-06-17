@@ -79,4 +79,4 @@ def calc_and_print_accuracy(data_name: str,  # 'zorro' or 'blimp
     df['Overall'] = df.mean(axis=1)
     df = df.sort_values(axis=0, by='Overall')
     for model_name, overall_acc in zip(df['Model'], df['Overall'].round(2)):
-        print(f'{model_name:<32} {overall_acc}')
+        print(f'{model_name:<40} {overall_acc}')
