@@ -107,7 +107,7 @@ def load_wikipedia_sentences(input_filepath: Path,
     res = []
     with open(input_filepath, 'r', encoding='utf-8') as input_stream:
         for idx, line in enumerate(input_stream):
-            if (idx + shift) % round(sampling) == 0:  # TODO test that shift results in different corpora
+            if (idx + shift) % round(sampling) == 0:
                 res.append(line.strip())
 
     return res

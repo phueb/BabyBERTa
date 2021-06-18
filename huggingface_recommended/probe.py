@@ -46,9 +46,9 @@ if __name__ == '__main__':
                                       })
 
         # for each probing task
-        for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
+        for paradigm_path in configs.Dirs.probing_sentences.rglob('*.txt'):
             do_probing(save_path,
-                       sentences_path,
+                       paradigm_path,
                        roberta,
                        step,
                        params.include_punctuation,

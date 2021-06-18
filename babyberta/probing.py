@@ -17,10 +17,11 @@ RobertaHubInterface = type  # this should be fairseq.RobertaHubInterface but fai
 
 
 def do_probing(save_path: Path,
-               sentences_path: Path,
+               paradigm_path: Path,
                model: Union[RobertaForMaskedLM, RobertaHubInterface],
                step: int,
                include_punctuation: bool,
+               lower_case: bool = False,  # necessary for case-sensitive Roberta-base trained on lower-cased data
                verbose: bool = False,
                tokenizer: Optional[Tokenizer] = None,  # not needed when probing fairseq Roberta
                ) -> None:
@@ -31,12 +32,18 @@ def do_probing(save_path: Path,
     """
     model.eval()
 
-    probe_name = sentences_path.stem
-    vocab_name = sentences_path.parent.name
+    probe_name = paradigm_path.stem
+    vocab_name = paradigm_path.parent.name
 
     # load probing sentences
     print(f'Starting probing with {probe_name}', flush=True)
-    sentences = load_sentences_from_file(sentences_path, include_punctuation=include_punctuation)
+    sentences_ = load_sentences_from_file(paradigm_path, include_punctuation=include_punctuation)
+
+    # lowercase  (do this for fairseq models trained on custom lower-cased data)
+    if lower_case:
+        sentences = [s.lower() for s in sentences_]
+    else:
+        sentences = sentences_
 
     # prepare dataset (if using huggingface model)
     if tokenizer is not None:
@@ -57,8 +64,8 @@ def do_probing(save_path: Path,
     else:
         cross_entropies = predict_forced_choice_fairseq(model, sentences, verbose)
 
-    # save results
-    save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
+    # save results  (save non-lower-cased sentences)
+    save_forced_choice_predictions(sentences_, cross_entropies, probing_results_path)
 
 
 def predict_forced_choice(model: RobertaForMaskedLM,

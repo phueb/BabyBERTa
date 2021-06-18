@@ -1,7 +1,15 @@
 """
 Probe roberta models trained in fairseq in the same way that BabyBERTa is probed.
 
+Test sentences are lower-cased because Roberta-base is case sensitive,
+because we trained Roberta-base on lower-cased data.
+
 We found better performance on grammatical accuracy when training Roberta-base with smaller batch size, 256.
+
+The folders named integers represent a different random initialisation (or "replication").
+Because of idiosyncrasies of loading the model data in fairseq,
+ the folder containing model data are inside the "replication" folder.
+
 """
 import shutil
 from fairseq.models.roberta import RobertaModel
@@ -13,74 +21,97 @@ from babyberta.probing import do_probing
 from babyberta.io import save_yaml_file
 
 
-MODEL_DATA_FOLDER_NAME = 'fairseq_Roberta-base_5M'
-REP = 2
-LAST_OR_BEST = 'last'  # last is better than best
+# TODO it would be faster to convert fairseq model to huggingface model before evaluation
+
+
+MODEL_DATA_FOLDER_NAMES = [
+    'fairseq_RoBERTa-base_AO-CHILDES',
+    'fairseq_RoBERTa-base_Wikipedia-1',
+]
+LAST_OR_BEST = 'last'  # last is better than best usually
 
 
 if __name__ == '__main__':
 
     assert configs.Dirs.probing_sentences.exists()
 
-    framework, architecture, data_size = MODEL_DATA_FOLDER_NAME.split('_')
+    # for all reps
+    for path_rep in (configs.Dirs.root / 'fairseq_models').glob('*'):
 
-    # remove previous results
-    path_model_results = configs.Dirs.probing_results / MODEL_DATA_FOLDER_NAME
-    if path_model_results.exists():
-        shutil.rmtree(path_model_results)
+        rep = path_rep.name
+        print(f'rep={rep}')
 
-    path_model_data = configs.Dirs.root / 'fairseq_models' / MODEL_DATA_FOLDER_NAME
+        # for all model groups
+        for path_model_data in path_rep.glob('*'):
 
-    for path_checkpoint in path_model_data.rglob(f'checkpoint_{LAST_OR_BEST}.pt'):
+            model_data_folder_name = path_model_data.name
 
-        rep = path_checkpoint.parent.name
+            if model_data_folder_name not in MODEL_DATA_FOLDER_NAMES:
+                continue
 
-        if int(rep) != int(REP):
-            continue
+            path_model_results = configs.Dirs.probing_results / model_data_folder_name
 
-        # load model
-        print(f'Loading model from {str(path_model_data / rep)}')
-        print(f'Loading checkpoint {str(path_checkpoint)}')
-        model = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / rep),
-                                             checkpoint_file=str(path_checkpoint),
-                                             data_name_or_path=str(path_model_data / 'aochildes-data-bin'),
-                                             )
-        print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
-        model.eval()
+            # remove previous results
+            path_remove = path_model_results / str(rep)
+            if path_remove.exists():
+                shutil.rmtree(path_remove)
 
-        model.cuda(0)
-        print(f'model.device={model.device}')
+            framework, architecture, corpora = model_data_folder_name.split('_')
 
-        # get step
-        state = load_checkpoint_to_cpu(str(path_checkpoint))
-        step = state['args'].total_num_update
+            path_checkpoint = path_model_data / f'checkpoint_{LAST_OR_BEST}.pt'
 
-        # check encoder of model
-        encoder: Encoder = model.bpe.bpe
-        num_vocab = len(encoder.encoder)
-        print(f'Found {num_vocab} words in vocab')
+            # load model
+            print(f'Loading model from {path_model_data}')
+            print(f'Loading checkpoint {path_checkpoint}')
+            if 'AO-CHILDES' in corpora:
+                bin_name = 'aochildes-data-bin'
+                data_size = '5M'
+            elif 'Wikipedia-1' in corpora:
+                bin_name = 'wikipedia1_new1_seg'
+                data_size = '13M'
+            else:
+                raise AttributeError('Invalid data size for fairseq model.')
+            model = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data),
+                                                 checkpoint_file=str(path_checkpoint),
+                                                 data_name_or_path=str(path_model_data / bin_name),
+                                                 )
+            print(f'Num parameters={sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
+            model.eval()
+            model.cuda(0)
+            print(f'model.device={model.device}')
 
-        # make new save_path
-        save_path = path_model_results / str(rep) / 'saves'
-        if not save_path.is_dir():
-            save_path.mkdir(parents=True, exist_ok=True)
+            # get step
+            state = load_checkpoint_to_cpu(str(path_checkpoint))
+            step = state['args'].total_num_update
 
-        # save basic model info
-        if not (path_model_results / 'param2val.yaml').exists():
-            save_yaml_file(path_out=path_model_results / 'param2val.yaml',
-                           param2val={'framework': framework,
-                                      'architecture': architecture,
-                                      'data_size': data_size,
-                                      })
+            # check encoder of model
+            encoder: Encoder = model.bpe.bpe
+            num_vocab = len(encoder.encoder)
+            print(f'Found {num_vocab} words in vocab')
 
-        # for each probing task
-        for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
-            do_probing(save_path,
-                       sentences_path,
-                       model,
-                       step,
-                       include_punctuation=True,
-                       )
+            # make new save_path
+            save_path = path_model_results / str(rep) / 'saves'
+            if not save_path.is_dir():
+                save_path.mkdir(parents=True, exist_ok=True)
+
+            # save basic model info
+            if not (path_model_results / 'param2val.yaml').exists():
+                save_yaml_file(path_out=path_model_results / 'param2val.yaml',
+                               param2val={'framework': framework,
+                                          'architecture': architecture,
+                                          'corpora': corpora,
+                                          'data_size': data_size,
+                                          })
+
+            # for each paradigm
+            for paradigm_path in configs.Dirs.probing_sentences.rglob('*.txt'):
+                do_probing(save_path,
+                           paradigm_path,
+                           model,
+                           step,
+                           include_punctuation=True,
+                           lower_case=True,
+                           )
 
 
 

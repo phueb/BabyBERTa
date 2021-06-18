@@ -157,8 +157,8 @@ def main(param2val):
                     print(f'dev pp={pp}', flush=True)
 
                 # probing - test sentences for specific syntactic tasks
-                for sentences_path in probing_path.rglob(f'**/**/*.txt'):  # task_type / vocab_size
-                    do_probing(save_path, sentences_path, model, step,
+                for paradigm_path in probing_path.rglob(f'*.txt'):
+                    do_probing(save_path, paradigm_path, model, step,
                                params.include_punctuation, tokenizer=tokenizer)
 
                 if max_step - step < configs.Eval.interval:  # no point in continuing training

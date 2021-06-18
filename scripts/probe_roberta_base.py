@@ -12,21 +12,23 @@ from babyberta.io import save_yaml_file
 
 
 for model_results_folder_name in [
-    'huggingface_Roberta-base_10M',
-    'huggingface_Roberta-base_30B',
+    'huggingface_RoBERTa-base_10M',
+    'huggingface_RoBERTa-base_30B',
 ]:
 
-    framework, architecture, data_size = model_results_folder_name.split('_')
+    framework, architecture, corpora = model_results_folder_name.split('_')
 
     # load NYU roberta-base trained on less data
-    if data_size == '10M':
+    if corpora == 'Warstadt2020':
         model = AutoModelForMaskedLM.from_pretrained("nyu-mll/roberta-base-10M-2")
         tokenizer = AutoTokenizer.from_pretrained("nyu-mll/roberta-base-10M-2")
+        corpora = 'Warstadt et al., 2020'
 
     # load huggingface roberta base
-    elif data_size == '30B':
+    elif corpora == 'Liu2019':
         model = RobertaForMaskedLM.from_pretrained('roberta-base')
         tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
+        corpora = 'Liu et al., 2019'
     else:
         raise AttributeError
 
@@ -50,13 +52,14 @@ for model_results_folder_name in [
         save_yaml_file(path_out=path_model_results / 'param2val.yaml',
                        param2val={'framework': framework,
                                   'architecture': architecture,
-                                  'data_size': data_size,
+                                  'data_size': corpora,
+                                  'corpora': corpora,
                                   })
 
     # for each probing task
-    for sentences_path in configs.Dirs.probing_sentences.rglob('*.txt'):
+    for paradigm_path in configs.Dirs.probing_sentences.rglob('*.txt'):
         do_probing(save_path,
-                   sentences_path,
+                   paradigm_path,
                    model,
                    step=500_000,
                    tokenizer=tokenizer,

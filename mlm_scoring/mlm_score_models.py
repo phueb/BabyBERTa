@@ -43,7 +43,7 @@ from babyberta import configs
 from babyberta.utils import load_tokenizer
 
 DATA_NAME = 'zorro'  # zorro or blimp
-LOWER_CASE = False  # this affects both zorro (proper nouns) and blimp
+LOWER_CASE = True  # this affects both zorro (proper nouns) and blimp
 
 if DATA_NAME == 'blimp':
     num_paradigms = 67
@@ -55,11 +55,14 @@ else:
 # BabyBERTa models trained by us
 babyberta_models = [p.name for p in (configs.Dirs.root / 'saved_models').glob('*')]
 # trained by others
-huggingface_models = ['RoBERTa-base_10M', 'RoBERTa-base_30B']
+huggingface_models = ['RoBERTa-base_Warstadt2020', 'RoBERTa-base_Liu2019']
 # trained by us using fairseq - needs to be converted
 fairseq_models = ['RoBERTa-base_AO-CHILDES', 'RoBERTa-base_Wikipedia-1']
 
-model_names = babyberta_models + fairseq_models + huggingface_models
+model_names = []
+# model_names.extend(babyberta_models)
+model_names.extend(fairseq_models)
+# model_names.extend(huggingface_models)
 
 path_to_output_dir = Path(DATA_NAME) / 'output' / f'lower_case={LOWER_CASE}'
 
@@ -93,13 +96,13 @@ for model_name in model_names:
         tokenizer = load_tokenizer(path_tokenizer_config, max_input_length=128)
 
     # pre-trained RoBERTa-base by Warstadt et al., 2020
-    elif model_name == 'RoBERTa-base_10M':
+    elif model_name == 'RoBERTa-base_Warstadt2020':
         model = AutoModelForMaskedLM.from_pretrained("nyu-mll/roberta-base-10M-2")
         tokenizer = AutoTokenizer.from_pretrained("nyu-mll/roberta-base-10M-2")
         vocab = tokenizer.get_vocab()
 
     # pre-trained RoBERTa-base by Liu et al., 2019
-    elif model_name == 'RoBERTa-base_30B':
+    elif model_name == 'RoBERTa-base_Liu2019':
         model = RobertaForMaskedLM.from_pretrained('roberta-base')
         tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
         vocab = tokenizer.get_vocab()
@@ -108,13 +111,15 @@ for model_name in model_names:
     elif model_name in fairseq_models:
         if 'AO-CHILDES' in model_name:
             bin_name = 'aochildes-data-bin'
+            corpora = 'AO-CHILDES'
         elif 'Wikipedia-1' in model_name:
             bin_name = 'wikipedia1_new1_seg'
+            corpora = 'Wikipedia-1'
         else:
             raise AttributeError('Invalid data size for fairseq model.')
-        path_model_data = configs.Dirs.root / 'fairseq_models' / model_name
-        model_ = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data / '0'),
-                                              checkpoint_file=str(path_model_data / '0' / 'checkpoint_last.pt'),
+        path_model_data = configs.Dirs.root / 'fairseq_models' / '0' / f'fairseq_RoBERTa-base_{corpora}'
+        model_ = RobertaModel.from_pretrained(model_name_or_path=str(path_model_data),
+                                              checkpoint_file=str(path_model_data / 'checkpoint_last.pt'),
                                               data_name_or_path=str(path_model_data / bin_name),
                                               )
         model, tokenizer = convert_fairseq_roberta_to_pytorch(model_)
