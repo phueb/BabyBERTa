@@ -3,12 +3,8 @@ import torch
 from torch.nn import CrossEntropyLoss
 from typing import Tuple, List, Dict
 from itertools import islice
-from pathlib import Path
-
-from tokenizers import Tokenizer
 
 from babyberta import configs
-
 
 loss_fct = CrossEntropyLoss()
 
@@ -71,43 +67,3 @@ def forward_mlm(model,
                     labels)  # [num masks in batch]
 
     return loss
-
-
-def load_tokenizer(config_path: Path,
-                   max_input_length: int,
-                   ) -> Tokenizer:
-
-    tokenizer = Tokenizer.from_file(str(config_path))
-    tokenizer.enable_truncation(max_length=max_input_length)
-
-    return tokenizer
-
-
-def load_wikipedia_sentences(input_filepath: Path,
-                             percent: int,
-                             shift: int,
-                             ) -> List[str]:
-    """
-    return a sample of wiki sentences from a large text file, built using witokit.
-
-    """
-
-    if not 0 < percent < 100:
-        raise Exception('Specified percent param should be in ]0, 100[')
-    print('Sampling input file {}'.format(input_filepath))
-
-    print('Counting number of lines in file...')
-    with input_filepath.open('r', encoding='utf-8') as input_stream:
-        num_lines = sum(1 for x in input_stream)
-    print(f'Number of lines in {input_filepath}={num_lines:,}')
-    final_count = num_lines * percent / 100
-    sampling = num_lines / final_count
-
-    # collect sentences
-    res = []
-    with open(input_filepath, 'r', encoding='utf-8') as input_stream:
-        for idx, line in enumerate(input_stream):
-            if (idx + shift) % round(sampling) == 0:
-                res.append(line.strip())
-
-    return res

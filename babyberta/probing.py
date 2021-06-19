@@ -10,25 +10,18 @@ from transformers.models.roberta import RobertaForMaskedLM
 
 from babyberta.utils import make_sequences
 from babyberta.dataset import DataSet
-from babyberta.io import load_sentences_from_file, save_forced_choice_predictions, save_open_ended_predictions
-
-
-RobertaHubInterface = type  # this should be fairseq.RobertaHubInterface but fairseq should not be imported here
+from babyberta.io import load_sentences_from_file, save_forced_choice_predictions
 
 
 def do_probing(save_path: Path,
                paradigm_path: Path,
-               model: Union[RobertaForMaskedLM, RobertaHubInterface],
+               model: RobertaForMaskedLM,
                step: int,
                include_punctuation: bool,
-               lower_case: bool = False,  # necessary for case-sensitive Roberta-base trained on lower-cased data
-               verbose: bool = False,
-               tokenizer: Optional[Tokenizer] = None,  # not needed when probing fairseq Roberta
+               tokenizer: Tokenizer,
                ) -> None:
     """
-    probe a model on a single task.
-
-    a model is a Roberta model, and can be from fairseq or huggingface framework
+    probe a model on a single paradigm.
     """
     model.eval()
 
@@ -37,21 +30,12 @@ def do_probing(save_path: Path,
 
     # load probing sentences
     print(f'Starting probing with {probe_name}', flush=True)
-    sentences_ = load_sentences_from_file(paradigm_path, include_punctuation=include_punctuation)
+    sentences = load_sentences_from_file(paradigm_path, include_punctuation=include_punctuation)
 
-    # lowercase  (do this for fairseq models trained on custom lower-cased data)
-    if lower_case:
-        sentences = [s.lower() for s in sentences_]
-    else:
-        sentences = sentences_
-
-    # prepare dataset (if using huggingface model)
-    if tokenizer is not None:
-        sequences = make_sequences(sentences, num_sentences_per_input=1)
-        assert len(sequences) == len(sentences)
-        dataset = DataSet.for_probing(sequences, tokenizer)
-    else:
-        dataset = None
+    # prepare dataset
+    sequences = make_sequences(sentences, num_sentences_per_input=1)
+    assert len(sequences) == len(sentences)
+    dataset = DataSet.for_probing(sequences, tokenizer)
 
     # prepare out path
     probing_results_path = save_path / vocab_name / f'probing_{probe_name}_results_{step}.txt'
@@ -59,18 +43,15 @@ def do_probing(save_path: Path,
         probing_results_path.parent.mkdir(exist_ok=True, parents=True)
 
     # do inference
-    if tokenizer is not None:
-        cross_entropies = predict_forced_choice(model, dataset)
-    else:
-        cross_entropies = predict_forced_choice_fairseq(model, sentences, verbose)
+    cross_entropies = calc_cross_entropies(model, dataset)
 
     # save results  (save non-lower-cased sentences)
-    save_forced_choice_predictions(sentences_, cross_entropies, probing_results_path)
+    save_forced_choice_predictions(sentences, cross_entropies, probing_results_path)
 
 
-def predict_forced_choice(model: RobertaForMaskedLM,
-                          dataset: DataSet,
-                          ) -> List[float]:
+def calc_cross_entropies(model: RobertaForMaskedLM,
+                         dataset: DataSet,
+                         ) -> List[float]:
     model.eval()
     cross_entropies = []
     loss_fct = CrossEntropyLoss(reduction='none')
@@ -101,34 +82,3 @@ def predict_forced_choice(model: RobertaForMaskedLM,
 
 def make_pretty(sentence: str):
     return " ".join([f"{w:<18}" for w in sentence.split()])
-
-
-def predict_forced_choice_fairseq(model: RobertaHubInterface,
-                                  sentences: List[str],
-                                  verbose: bool,
-                                  ):
-    from fairseq import utils
-
-    res = []
-    loss_fct = CrossEntropyLoss(reduction='none')
-    for n, sentence in enumerate(sentences):
-        with torch.no_grad():
-            tokens = model.encode(sentence).long().to(device=model.device)
-            if tokens.dim() == 1:
-                tokens = tokens.unsqueeze(0)
-            with utils.model_eval(model.model):
-                features, _ = model.model(tokens,
-                                          features_only=False,
-                                          return_all_hiddens=False,
-                                          )
-            logits_3d = features  # [batch size, seq length, vocab size]
-            # logits need to be [batch size, vocab size, seq length]
-            # tags need to be [batch size, seq length]
-            labels = tokens
-            ce = loss_fct(logits_3d.permute(0, 2, 1), labels).cpu().numpy().mean()
-            res.append(ce)
-
-            if verbose:
-                print(
-                    f'{n + 1:>6}/{len(sentences):>6} | {ce:.2f} {make_pretty(sentence)}')
-    return res

@@ -8,9 +8,7 @@ from transformers.models.roberta import RobertaForMaskedLM
 from babyberta import configs
 from babyberta.params import param2default, Params
 from babyberta.probing import do_probing
-from babyberta.utils import load_tokenizer
-from babyberta.io import save_yaml_file
-
+from babyberta.io import save_yaml_file, load_tokenizer
 
 MAX_STEP = 260_000
 
@@ -53,5 +51,4 @@ if __name__ == '__main__':
                        step,
                        params.include_punctuation,
                        tokenizer=tokenizer,
-                       verbose=True,
                        )

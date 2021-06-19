@@ -4,7 +4,6 @@ from pathlib import Path
 class Dirs:
     root = Path(__file__).parent.parent
     data = root / 'data'
-    mlm_scoring = root / 'mlm_scoring'
     corpora = data / 'corpora'
     tokenizers = data / 'tokenizers'
     saved_models = root / 'saved_models'

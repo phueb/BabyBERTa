@@ -11,7 +11,7 @@ notes:
 from aochildes.dataset import ChildesDataSet
 from aonewsela.dataset import NewselaDataSet
 
-from babyberta.utils import load_wikipedia_sentences
+from babyberta.io import load_wikipedia_sentences
 from babyberta import configs
 
 CORPUS_NAME = 'aonewsela'

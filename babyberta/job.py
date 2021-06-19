@@ -10,9 +10,9 @@ from transformers.models.roberta import RobertaForMaskedLM, RobertaConfig
 from transformers import AdamW, get_linear_schedule_with_warmup
 
 from babyberta import configs
-from babyberta.io import load_sentences_from_file
+from babyberta.io import load_sentences_from_file, load_tokenizer
 from babyberta.params import Params
-from babyberta.utils import split, make_sequences, forward_mlm, load_tokenizer
+from babyberta.utils import split, make_sequences, forward_mlm
 from babyberta.probing import do_probing
 from babyberta.dataset import DataSet
 
@@ -80,14 +80,18 @@ def main(param2val):
                            intermediate_size=params.intermediate_size,
                            initializer_range=params.initializer_range,
                            )
-    model = RobertaForMaskedLM(config=config)
-    if params.load_from_checkpoint.startswith('param'):  # load weights from previous checkpoint
+    # load weights from previous checkpoint
+    if params.load_from_checkpoint.startswith('param'):
         path_tmp = Path(param2val['project_path']) / 'runs' / params.load_from_checkpoint
         model_files = list(path_tmp.rglob('**/saves/*.bin'))
         print(f'Found {len(model_files)} saved models')
         path_cpt = random.choice(model_files)
         print(f'Trying to load model from {path_cpt.parent}')
-        model.from_pretrained(path_cpt.parent)
+        model = RobertaForMaskedLM.from_pretrained(path_cpt.parent)
+    # initialize random weights
+    else:
+        model = RobertaForMaskedLM(config=config)
+
     print('Number of parameters: {:,}'.format(model.num_parameters()), flush=True)
     model.cuda(0)
 
@@ -156,7 +160,7 @@ def main(param2val):
                     name2xy.setdefault(f'dev_pps', []).append((step, pp))
                     print(f'dev pp={pp}', flush=True)
 
-                # probing - test sentences for specific syntactic tasks
+                # probing on grammar test suite
                 for paradigm_path in probing_path.rglob(f'*.txt'):
                     do_probing(save_path, paradigm_path, model, step,
                                params.include_punctuation, tokenizer=tokenizer)

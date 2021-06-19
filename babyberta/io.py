@@ -1,27 +1,11 @@
 import yaml
 import random
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from pathlib import Path
 
+from tokenizers import Tokenizer
+
 from babyberta import configs
-
-
-def save_open_ended_predictions(raw_sentences: List[str],
-                                predicted_words: List[str],
-                                out_path: Path,
-                                verbose: bool = False,
-                                ) -> None:
-    print(f'Saving open_ended probing results to {out_path}')
-    with out_path.open('w') as f:
-        for rs, pw in zip(raw_sentences, predicted_words):
-            for rw in rs.split():
-                line = f'{rw:>20} {rw if rw != configs.Data.mask_symbol else pw:>20}'
-                f.write(line + '\n')
-                if verbose:
-                    print(line)
-            f.write('\n')
-            if verbose:
-                print('\n')
 
 
 def save_forced_choice_predictions(raw_sentences: List[str],
@@ -91,3 +75,43 @@ def save_yaml_file(path_out: Path,
         path_out.parent.mkdir()
     with path_out.open('w', encoding='utf8') as f:
         yaml.dump(param2val, f, default_flow_style=False, allow_unicode=True)
+
+
+def load_tokenizer(config_path: Path,
+                   max_input_length: int,
+                   ) -> Tokenizer:
+
+    tokenizer = Tokenizer.from_file(str(config_path))
+    tokenizer.enable_truncation(max_length=max_input_length)
+
+    return tokenizer
+
+
+def load_wikipedia_sentences(input_filepath: Path,
+                             percent: int,
+                             shift: int,
+                             ) -> List[str]:
+    """
+    return a sample of wiki sentences from a large text file, built using witokit.
+
+    """
+
+    if not 0 < percent < 100:
+        raise Exception('Specified percent param should be in ]0, 100[')
+    print('Sampling input file {}'.format(input_filepath))
+
+    print('Counting number of lines in file...')
+    with input_filepath.open('r', encoding='utf-8') as input_stream:
+        num_lines = sum(1 for x in input_stream)
+    print(f'Number of lines in {input_filepath}={num_lines:,}')
+    final_count = num_lines * percent / 100
+    sampling = num_lines / final_count
+
+    # collect sentences
+    res = []
+    with open(input_filepath, 'r', encoding='utf-8') as input_stream:
+        for idx, line in enumerate(input_stream):
+            if (idx + shift) % round(sampling) == 0:
+                res.append(line.strip())
+
+    return res
