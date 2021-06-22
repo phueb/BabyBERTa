@@ -22,6 +22,7 @@ tokenizer = AutoTokenizer.from_pretrained('saved_models/BabyBERTa_AO-CHILDES',
 model = RobertaForMaskedLM.from_pretrained('saved_models/BabyBERTa_AO-CHILDES')
 ``` 
 
+Note: Each saved checkpoint corresponds to the top-scoring model out of 10 differently initialized models on the [Zorro](https://github.com/phueb/Zorro) test suite. 
 
 ## History
 
@@ -34,7 +35,9 @@ Having found little benefit for joint SRL and MLM training of a custom (smaller 
  
 ## Probing for syntactic knowledge
 
-Probing data can be found [here](https://github.com/phueb/Zorro). 
+In order to probe BabyBERTa's grammatical knowledge, 
+a test suite made of words commonly found in child-directed input is recommended. 
+We developed such a test suite, [Zorro](https://github.com/phueb/Zorro). 
 
 
 ## BabyBERTa vs. RoBERTa

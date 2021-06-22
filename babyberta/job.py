@@ -53,11 +53,21 @@ def main(param2val):
     for corpus_name in params.corpora:
         data_path = project_path / 'data' / 'corpora' / f'{corpus_name}.txt'
         sentences_in_corpus = load_sentences_from_file(data_path,
-                                                       training_order=params.training_order,
                                                        include_punctuation=params.include_punctuation,
                                                        allow_discard=True)
         print(f'Loaded {len(sentences_in_corpus):>12,} sentences from {corpus_name}')
         sentences += sentences_in_corpus
+
+    # training order (do this after loading all corpora, otherwise re-ordering is performed within each corpus
+    if params.training_order == 'shuffled':
+        random.shuffle(sentences)
+    elif params.training_order == 'original':
+        pass
+    elif params.training_order == 'reversed':
+        sentences = sentences[::-1]
+    else:
+        raise AttributeError('Invalid arg to training_order.')
+
     all_sequences = make_sequences(sentences, params.num_sentences_per_input)
     train_sequences, devel_sequences = split(all_sequences)
 
