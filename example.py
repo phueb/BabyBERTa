@@ -6,9 +6,6 @@ Careful: BabyBERTa uses a custom tokenizer which was trained with add_prefix_spa
 
 from transformers.models.roberta import RobertaTokenizerFast
 
-from babyberta import configs
-from babyberta.io import load_tokenizer
-
 ##################################################
 # roberta-base - RobertaTokenizer.from_pretrained
 ##################################################
@@ -18,18 +15,10 @@ tokenizer = RobertaTokenizerFast.from_pretrained('roberta-base',
 print(tokenizer.tokenize('Philip wanted to show you an example of tokenization.'))
 
 ##################################################
-# babyberta - load_tokenizer
-##################################################
-
-path_tokenizer_config = configs.Dirs.tokenizers / 'babyberta.json'
-tokenizer = load_tokenizer(path_tokenizer_config, max_input_length=128)
-print(tokenizer.encode('Philip wanted to show you an example of tokenization.', add_special_tokens=False).tokens)
-
-##################################################
 # babyberta - AutoTokenizer.from_pretrained
 ##################################################
 
 tokenizer = RobertaTokenizerFast.from_pretrained('saved_models/BabyBERTa_AO-CHILDES',
-                                                 add_prefix_space=True,  # this must be added to produce intended behavior
+                                                 add_prefix_space=True,  # must be added to produce intended behavior
                                                  )
 print(tokenizer.tokenize('Philip wanted to show you an example of tokenization.'))

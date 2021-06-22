@@ -29,12 +29,6 @@ trainer = BpeTrainer(special_tokens=configs.Data.roberta_symbols,
 tokenizer.train(corpus_file_paths, trainer)
 
 # add additional info
-tokenizer.post_processor = TemplateProcessing(
-        single="<s> $A </s>",
-        pair=None,
-        special_tokens=[("<s>", tokenizer.token_to_id("<s>")), ("</s>", tokenizer.token_to_id("</s>"))],
-    )
-
 tokenizer.post_processor = RobertaProcessing(sep=('</s>', tokenizer.token_to_id("</s>")),
                                              cls=('<s>', tokenizer.token_to_id("<s>")),
                                              add_prefix_space=ADD_PREFIX_SPACE)
