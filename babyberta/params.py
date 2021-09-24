@@ -7,7 +7,10 @@ param2requests = {
         # ('aonewsela',),
         # ('wikipedia1',),
         # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
-        ('aochildes', 'aonewsela', 'wikipedia3'),
+        # ('aochildes', 'aonewsela', 'wikipedia3'),
+
+
+        ('wikipedia3', 'aonewsela'),
     ],
 
     'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
