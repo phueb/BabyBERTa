@@ -19,7 +19,7 @@
       "special": true,
       "content": "<mask>",
       "single_word": false,
-      "lstrip": false,
+      "lstrip": true,
       "rstrip": false,
       "normalized": false
     },
@@ -81,7 +81,7 @@
     "trim_offsets": true,
     "add_prefix_space": true
   },
-  "decoder": null,
+  "decoder":{"type":"ByteLevel","add_prefix_space":true,"trim_offsets":true},
   "model": {
     "type": "BPE",
     "dropout": null,

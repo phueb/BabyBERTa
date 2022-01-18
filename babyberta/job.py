@@ -202,7 +202,7 @@ def main(param2val):
         s.name = name
         performance_curves.append(s)
 
-    # save  # TODO thes are not saved at the same training step across differently sized corpora
+    # save  # TODO these are not saved at the same training step across differently sized corpora
     model.save_pretrained(save_path)
     config.save_pretrained(save_path)
     tokenizer.save(str(save_path / 'tokenizer.json'), pretty=True)

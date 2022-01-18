@@ -28,7 +28,15 @@ tokenizer2 = RobertaTokenizerFast.from_pretrained('../saved_models/BabyBERTa_AO-
 for paradigm_path in PATH_TO_SENTENCES.glob('*.txt'):
     print(f'Checking tokenization with sentences in {paradigm_path}')
     for line in paradigm_path.read_text().split('\n'):
+
+        masked_id = 3
+        line = ' '.join([w if n != masked_id else '<mask>' for n, w in enumerate(line.split())])
+
         res1 = tokenizer1.encode(line, add_special_tokens=False).tokens
         res2 = tokenizer2.tokenize(line)
+
+        print(res1)
+        print(res2)
+
         assert res1 == res2
 

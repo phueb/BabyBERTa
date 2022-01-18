@@ -32,6 +32,7 @@ tokenizer.train(corpus_file_paths, trainer)
 tokenizer.post_processor = RobertaProcessing(sep=('</s>', tokenizer.token_to_id("</s>")),
                                              cls=('<s>', tokenizer.token_to_id("<s>")),
                                              add_prefix_space=ADD_PREFIX_SPACE)
+tokenizer.decoder = ByteLevel(add_prefix_space=ADD_PREFIX_SPACE)
 tokenizer.enable_padding(pad_id=tokenizer.token_to_id(configs.Data.pad_symbol), pad_token=configs.Data.pad_symbol)
 tokenizer.enable_truncation(max_length=128)
 
