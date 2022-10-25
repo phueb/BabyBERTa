@@ -11,7 +11,7 @@ Our model is implemented using the `transformers` Python package, maintained by 
 ## Usage
 
 To use BabyBERTa pre-trained on AO-CHILDES, 
-follow the instructions on the `huggingface` model hub, [here](https://huggingface.co/phueb/BabyBERTa/tree/main)
+follow the instructions on the `huggingface` model hub, [here](https://huggingface.co/phueb/BabyBERTa-1/tree/main)
 
 Alternatively, download this repository, install the dependencies, and then:
 
