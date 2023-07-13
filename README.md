@@ -117,6 +117,45 @@ Then, type the following into the terminal:
 
 `ludwig -r10 -i`
 
+### A note on using Ludwig
+
+If you want to use `ludwig` to submit training jobs, you have to understand how it interacts with `params.py`. For example, if you set,
+
+```
+param2requests = {
+    'training_order': ['original', 'reversed'], 
+    'consecutive_masking': [True],
+}
+```
+
+and then run `ludwig -i`, you will train BabyBERTa once on the unmodified training corpus, and again on the same corpus in reverse order. Because `'consecutive_masking'` only has a single value provided to it in the list, this will not result in additional models being trained. Rather, both models will be trained with `'consecutive_masking'` set to `True`. 
+The same is true of any parameter in param2requests. So,
+
+```
+param2requests = {
+    'batch_size': [16, 32], 
+    'consecutive_masking': [True, False],
+
+}
+```
+
+will result in 2x2=4 models being trained.
+The following,
+
+```
+param2requests = {
+    'training_order': ['original', 'reversed']
+    'batch_size': [16, 32, 64], 
+    'consecutive_masking': [True, False],
+
+}
+```
+
+will result in 2x3x2=12 models being trained. 
+You can ignore `param2debug`. It works exactly the same way as `param2requests`, except that it will be used instead of `param2requests` when you use the `-d` flag. 
+
+Note that each job both trains and evaluates a model at differenct checkpoints. The results of evaluation are saved to a folder that will created on your system. Each hyper parameter configuration has a dedicated folder. If you run multiple replications for each configuration (e.g. using the flag `-r`), each folder will be populated with additional sub-folders, one for each replication. 
+
 ## Compatibility
 
 Tested on Ubuntu 18.04, Python 3.8
