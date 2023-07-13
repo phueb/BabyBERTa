@@ -119,6 +119,7 @@ Then, type the following into the terminal:
 
 ### A note on using Ludwig
 
+Ludwig is a command line interface that helped me quickly run experiments while in grad school. While convenient, you don't have to use it in order to train BabyBERTa. 
 If you want to use `ludwig` to submit training jobs, you have to understand how it interacts with `params.py`. For example, if you set,
 
 ```
