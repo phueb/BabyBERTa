@@ -29,7 +29,10 @@ class Data:
 
 class Training:
     feedback_interval = 1000
-    max_step = None  # max step of aonewsela with num_mask_patterns = 6 is 160K
+
+    # for the published paper, we trained as many steps as needed to complete all epochs.
+    # however, we only reported results of evaluations at a fixed checkpoint (e.g. 260k steps)
+    max_step = None
 
 
 class Eval:
