@@ -38,7 +38,7 @@ param2debug = {
 }
 
 # this dict defines the parameters of the default model.
-# the default model is the best model trained on just AOCHILDES, without unmasking
+# the default model is the best model trained on just AO-CHILDES, without unmasking
 param2default = {
     # data
     'sample_with_replacement': False,  # this must be False if corpus order is to be preserved during training

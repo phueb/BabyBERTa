@@ -4,9 +4,11 @@
 
 ## About
 
-This repository contains research code for testing a small RoBERTA model trained on 
+This repository contains research code for training and evaluating a small RoBERTA model trained on 
 a small corpus of child-directed speech (5M words from American-English CHILDES).
 Our model is implemented using the `transformers` Python package, maintained by `huggingface`.
+
+The research paper is available [here](https://aclanthology.org/2021.conll-1.49/).
 
 ## Usage
 
