@@ -2,27 +2,19 @@ from dataclasses import dataclass
 from typing import Tuple
 
 param2requests = {
+
+    # the corpora on which the model will be trained.
+    # training iterates over corpora in the order in which they are specified here.
     'corpora': [
-        # ('aochildes',),
-        # ('aonewsela',),
-        # ('wikipedia1',),
-        # ('wikipedia1', 'wikipedia2', 'wikipedia3'),
-        # ('aochildes', 'aonewsela', 'wikipedia3'),
-
-
-        ('wikipedia3', 'aonewsela'),
+        ('aochildes',),
+        ('aonewsela',),
+        ('wikipedia1',),
     ],
 
-    'leave_unmasked_prob': [0.0],  # WARNING: change both leave_unmasked_prob and leave_unmasked_prob_start
+    # WARNING: if changing unmasking probability,
+    # change both leave_unmasked_prob and leave_unmasked_prob_start
+    'leave_unmasked_prob': [0.0],
     'leave_unmasked_prob_start': [0.0],
-
-    # 'load_from_checkpoint': ['param_001', 'param_003'],
-
-    # 'tokenizer': ['roberta-base'],
-
-    'training_order': ['original', 'reversed'],  # original or shuffled, use this alongside consecutive_masking=True
-    'consecutive_masking': [True],
-
 }
 
 # check
@@ -34,6 +26,7 @@ if 'leave_unmasked_prob_start' in param2requests:
                 raise ValueError(f'Using more than one epoch is not compatible with leave_unmasked_prob curriculum.')
 
 
+# this dict is used instead of param2requests when debugging (i.e. when -d flag is passed to ludwig)
 param2debug = {
     'num_mask_patterns': 1,
     'num_layers': 2,
