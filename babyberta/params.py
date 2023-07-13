@@ -37,6 +37,7 @@ param2debug = {
     'training_order': 'original',
 }
 
+# this dict defines the parameters of the default model.
 # the default model is the best model trained on just AOCHILDES, without unmasking
 param2default = {
     # data
